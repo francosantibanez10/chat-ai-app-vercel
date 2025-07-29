@@ -1,0 +1,27 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Reglas para archivos de usuarios
+    match /users/{userId}/{allPaths=**} {
+      // Permitir acceso solo al propietario
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Reglas para archivos de conversaciones
+    match /conversations/{conversationId}/{allPaths=**} {
+      // Permitir acceso solo a usuarios autenticados
+      // La validación específica se hará en el código de la aplicación
+      allow read, write: if request.auth != null;
+    }
+    
+    // Reglas para archivos temporales
+    match /temp/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Denegar acceso a todo lo demás
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+} 

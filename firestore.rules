@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas para conversaciones
+    match /conversations/{conversationId} {
+      // Permitir lectura y escritura solo al propietario de la conversación
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Permitir creación de nuevas conversaciones
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      
+      // Permitir actualización solo al propietario
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Permitir eliminación solo al propietario
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // Reglas para usuarios (si los tienes)
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Reglas para archivos subidos (si los tienes)
+    match /uploads/{uploadId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // Denegar acceso a todo lo demás
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 

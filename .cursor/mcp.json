@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "hud": {
+      "command": "~/.hud/mcp",
+      "args": [
+        "start"
+      ],
+      "NOTE": "Hud IDE extension is required for enabling Hud MCP. Learn more at docs.hud.io/docs/hud-mcp-server."
+    }
+  }
+}

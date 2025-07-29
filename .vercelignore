@@ -1,0 +1,3 @@
+# Excluir rutas de API del build estático
+src/app/api/
+out/api/ 
