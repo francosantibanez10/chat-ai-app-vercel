@@ -226,9 +226,9 @@ app.get("/api/gmail/test", async (req, res) => {
   try {
     console.log("Probando Gmail API con credenciales de servicio...");
 
-    // Usar credenciales de servicio
+    // Usar credenciales de servicio desde variables de entorno
     const auth = new google.auth.GoogleAuth({
-      keyFile: "./google-service-account.json",
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '{}'),
       scopes: [
         "https://www.googleapis.com/auth/gmail.readonly",
         "https://www.googleapis.com/auth/gmail.send",
@@ -441,9 +441,9 @@ app.get("/api/drive/test", async (req, res) => {
   try {
     console.log("Probando Drive API con credenciales de servicio...");
 
-    // Usar credenciales de servicio
+    // Usar credenciales de servicio desde variables de entorno
     const auth = new google.auth.GoogleAuth({
-      keyFile: "./google-service-account.json",
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '{}'),
       scopes: [
         "https://www.googleapis.com/auth/drive",
         "https://www.googleapis.com/auth/drive.file",
