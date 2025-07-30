@@ -25,6 +25,8 @@ import {
 import MathProblemRenderer from "./MathProblemRenderer";
 import TaskManager from "./TaskManager";
 import { useImageLibrary } from "@/contexts/ImageLibraryContext";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { toast } from "react-hot-toast";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -57,8 +59,8 @@ export const ChatMessage = React.memo<ChatMessageProps>(
     tasks,
     metadata,
   }) => {
-    const [isPlaying, setIsPlaying] = useState(false);
     const { saveImage } = useImageLibrary();
+    const { isPlaying, speak, stop, isSupported: isTTSSupported } = useTextToSpeech();
     const isUser = role === "user";
 
     // ✅ MODO STREAMING LIGERO: Bypass del pipeline pesado durante streaming
@@ -89,24 +91,23 @@ export const ChatMessage = React.memo<ChatMessageProps>(
     const handleCopy = async () => {
       try {
         await navigator.clipboard.writeText(content);
-        console.log("Contenido copiado al portapapeles");
+        toast.success("Contenido copiado al portapapeles");
       } catch (err) {
         console.error("Error al copiar:", err);
+        toast.error("Error al copiar el contenido");
       }
     };
 
     const handleVoiceToggle = () => {
-      setIsPlaying(!isPlaying);
-      if (!isPlaying) {
-        console.log("Reproduciendo audio...");
-        if ("speechSynthesis" in window) {
-          const utterance = new SpeechSynthesisUtterance(content);
-          utterance.lang = "es-ES";
-          speechSynthesis.speak(utterance);
-        }
+      if (!isTTSSupported) {
+        console.warn("Text-to-Speech no está soportado en este navegador");
+        return;
+      }
+
+      if (isPlaying) {
+        stop();
       } else {
-        console.log("Deteniendo audio...");
-        speechSynthesis.cancel();
+        speak(content);
       }
     };
 
@@ -116,9 +117,10 @@ export const ChatMessage = React.memo<ChatMessageProps>(
           source: "chat_message",
           timestamp: new Date().toISOString(),
         });
-        console.log("Imagen guardada en la biblioteca");
+        toast.success("Imagen guardada en la biblioteca");
       } catch (error) {
         console.error("Error al guardar imagen:", error);
+        toast.error("Error al guardar la imagen");
       }
     };
 

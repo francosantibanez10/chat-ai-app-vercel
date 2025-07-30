@@ -9,6 +9,7 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
+  signInAnonymously,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -19,6 +20,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInAnonymously: () => Promise<void>;
   firebaseAvailable: boolean;
 }
 
@@ -45,9 +47,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const unsubscribe = onAuthStateChanged(
         auth,
-        (user) => {
-          setUser(user);
-          setLoading(false);
+        async (user) => {
+          if (!user) {
+            // Si no hay usuario, intentar autenticación anónima
+            try {
+              console.log("🔄 Iniciando autenticación anónima...");
+              await signInAnonymously(auth);
+            } catch (error) {
+              console.error("❌ Error en autenticación anónima:", error);
+            }
+          } else {
+            console.log("✅ Usuario autenticado:", user.uid);
+            setUser(user);
+            setLoading(false);
+          }
         },
         (error) => {
           console.error("❌ Firebase Auth error:", error);
@@ -121,6 +134,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInAnonymouslyAuth = async () => {
+    if (!auth || !firebaseAvailable) {
+      throw new Error(
+        "Firebase Auth is not available. Please check your configuration."
+      );
+    }
+
+    try {
+      await signInAnonymously(auth);
+    } catch (error: any) {
+      throw new Error(error.message);
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -128,6 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     logout,
     signInWithGoogle,
+    signInAnonymously,
     firebaseAvailable,
   };
 

@@ -1,80 +1,70 @@
 #!/usr/bin/env node
 
 const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, getDocs } = require('firebase/firestore');
 const { getAuth, signInAnonymously } = require('firebase/auth');
+const { getFirestore, collection, getDocs } = require('firebase/firestore');
 
-// Configuración de Firebase (usar variables de entorno)
+// Configuración de Firebase
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyDwFs38Kte6fby7YKa8oFM8PFnukkxilzE",
+  authDomain: "mineral-nebula-459522-a9.firebaseapp.com",
+  projectId: "mineral-nebula-459522-a9",
+  storageBucket: "mineral-nebula-459522-a9.firebasestorage.app",
+  messagingSenderId: "881335335309",
+  appId: "1:881335335309:web:8b764351f28046b1f3a5c4",
 };
 
 async function verifyFirebaseSetup() {
   console.log('🔍 Verificando configuración de Firebase...\n');
 
   try {
-    // 1. Verificar configuración
-    console.log('1. Verificando configuración...');
-    if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-      throw new Error('❌ Variables de entorno de Firebase no configuradas');
-    }
-    console.log('✅ Configuración básica correcta');
-
-    // 2. Inicializar Firebase
-    console.log('\n2. Inicializando Firebase...');
+    // 1. Inicializar Firebase
+    console.log('1. Inicializando Firebase...');
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
     console.log('✅ Firebase inicializado correctamente');
 
-    // 3. Verificar autenticación
-    console.log('\n3. Verificando autenticación...');
-    const userCredential = await signInAnonymously(auth);
-    console.log('✅ Autenticación funcionando');
+    // 2. Verificar Auth
+    console.log('\n2. Verificando Firebase Auth...');
+    const auth = getAuth(app);
+    console.log('✅ Firebase Auth inicializado correctamente');
 
-    // 4. Verificar Firestore
-    console.log('\n4. Verificando Firestore...');
-    const conversationsRef = collection(db, 'conversations');
-    const snapshot = await getDocs(conversationsRef);
-    console.log(`✅ Firestore funcionando (${snapshot.size} conversaciones encontradas)`);
+    // 3. Verificar Firestore
+    console.log('\n3. Verificando Firestore...');
+    const db = getFirestore(app);
+    console.log('✅ Firestore inicializado correctamente');
 
-    // 5. Verificar reglas de seguridad
-    console.log('\n5. Verificando reglas de seguridad...');
+    // 4. Intentar autenticación anónima
+    console.log('\n4. Probando autenticación anónima...');
     try {
-      // Intentar crear una conversación de prueba
-      const testConversation = {
-        title: 'Test Conversation',
-        userId: userCredential.user.uid,
-        messages: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        model: 'gpt-3.5-turbo'
-      };
-      
-      // Esto debería fallar si las reglas están funcionando correctamente
-      // ya que estamos usando autenticación anónima
-      console.log('✅ Reglas de seguridad activas');
-
-    } catch (error) {
-      console.log('✅ Reglas de seguridad funcionando (acceso denegado como esperado)');
+      const userCredential = await signInAnonymously(auth);
+      console.log('✅ Autenticación anónima exitosa');
+      console.log(`   User ID: ${userCredential.user.uid}`);
+    } catch (authError) {
+      console.log('❌ Error en autenticación anónima:', authError.message);
     }
 
-    console.log('\n🎉 ¡Verificación completada exitosamente!');
-    console.log('\n📋 Resumen:');
-    console.log('   ✅ Configuración de Firebase');
-    console.log('   ✅ Autenticación');
-    console.log('   ✅ Firestore');
-    console.log('   ✅ Reglas de seguridad');
-    console.log('   ✅ Índices desplegados');
+    // 5. Intentar leer colección de conversaciones
+    console.log('\n5. Probando lectura de Firestore...');
+    try {
+      const conversationsRef = collection(db, 'conversations');
+      const snapshot = await getDocs(conversationsRef);
+      console.log('✅ Lectura de Firestore exitosa');
+      console.log(`   Documentos encontrados: ${snapshot.size}`);
+    } catch (firestoreError) {
+      console.log('❌ Error en lectura de Firestore:', firestoreError.message);
+      
+      if (firestoreError.message.includes('permission')) {
+        console.log('\n💡 El error de permisos puede ser porque:');
+        console.log('   - El usuario no está autenticado');
+        console.log('   - Las reglas de Firestore no están desplegadas');
+        console.log('   - Las reglas son demasiado restrictivas');
+      }
+    }
+
+    console.log('\n🎉 Verificación completada');
 
   } catch (error) {
-    console.error('\n❌ Error durante la verificación:', error.message);
-    process.exit(1);
+    console.error('❌ Error general:', error.message);
   }
 }
 

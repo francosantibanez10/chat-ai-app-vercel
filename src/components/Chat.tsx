@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useEffect,
 } from "react";
-import { MoreHorizontal, Menu } from "lucide-react";
+import { MoreHorizontal, Menu, ChevronDown } from "lucide-react";
 import { useChat } from "ai/react";
 import { ChatMessage } from "./ChatMessage";
 import ChatInput from "./ChatInput";
@@ -27,7 +27,14 @@ import { useImageLibrary } from "@/contexts/ImageLibraryContext";
 import { useRouter } from "next/navigation";
 import { UserPlan } from "@/lib/plans";
 import { useAuth } from "@/contexts/AuthContext";
-import { getConversation } from "@/lib/firebase/conversations";
+import {
+  getConversation,
+  updateMessageInConversation,
+  deleteMessageFromConversation,
+} from "@/lib/firebase/conversations";
+import { toast } from "react-hot-toast";
+import { submitFeedback } from "@/lib/feedback";
+import { submitReport } from "@/lib/reports";
 
 // Extender el tipo Message para incluir metadata
 interface ExtendedMessage {
@@ -68,6 +75,9 @@ const Chat = React.memo(function Chat({
     feature: string;
   } | null>(null);
 
+  // Estado para controlar cuándo mostrar el botón "Ir a último mensaje"
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+
   // Configuración para streaming optimizado
   const [streamingOptimized, setStreamingOptimized] = useState(false);
 
@@ -98,6 +108,21 @@ const Chat = React.memo(function Chat({
       currentConversationIdRef.current = null;
     }
   }, [user?.uid]);
+
+  // Listener de scroll para mostrar/ocultar el botón "Ir a último mensaje"
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // Si estamos a más de 100 píxeles del fondo, mostramos el botón
+      setShowScrollToBottom(scrollTop + clientHeight < scrollHeight - 100);
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // ✅ Cargar conversación cuando cambie el conversationId
   useEffect(() => {
@@ -509,24 +534,187 @@ const Chat = React.memo(function Chat({
   };
 
   // Funciones para las acciones de los mensajes
-  const handleEditMessage = (index: number, newContent: string) => {
-    // Aquí implementarías la lógica para editar el mensaje
-    console.log(`Editando mensaje ${index}:`, newContent);
+  const handleEditMessage = async (index: number, newContent: string) => {
+    try {
+      const messageToEdit = messages[index];
+      if (!messageToEdit) return;
+
+      // Actualizar el mensaje en el estado local
+      const updatedMessages = [...messages];
+      updatedMessages[index] = {
+        ...updatedMessages[index],
+        content: newContent,
+      };
+
+      // Actualizar el estado de la conversación
+      setMessages(updatedMessages);
+
+      // Si hay una conversación activa, actualizar en Firebase
+      if (currentConversation?.id) {
+        // Actualizar el mensaje en Firebase
+        await updateMessageInConversation(
+          currentConversation.id,
+          messageToEdit.id,
+          newContent
+        );
+      }
+
+      toast.success("Mensaje editado correctamente");
+    } catch (error) {
+      console.error("Error editing message:", error);
+      toast.error("Error al editar el mensaje");
+
+      // Revertir cambios en caso de error
+      setMessages(messages);
+    }
   };
 
-  const handleDeleteMessage = (index: number) => {
-    // Aquí implementarías la lógica para eliminar el mensaje
-    console.log(`Eliminando mensaje ${index}`);
+  const handleDeleteMessage = async (index: number) => {
+    try {
+      const messageToDelete = messages[index];
+      if (!messageToDelete) return;
+
+      // Confirmar eliminación
+      if (!confirm("¿Estás seguro de que quieres eliminar este mensaje?")) {
+        return;
+      }
+
+      // Eliminar el mensaje del estado local
+      const updatedMessages = messages.filter((_, i) => i !== index);
+      setMessages(updatedMessages);
+
+      // Si hay una conversación activa, eliminar de Firebase
+      if (currentConversation?.id) {
+        await deleteMessageFromConversation(
+          currentConversation.id,
+          messageToDelete.id
+        );
+      }
+
+      toast.success("Mensaje eliminado correctamente");
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      toast.error("Error al eliminar el mensaje");
+
+      // Revertir cambios en caso de error
+      setMessages(messages);
+    }
   };
 
-  const handleRegenerateResponse = (index: number) => {
-    // Aquí implementarías la lógica para regenerar la respuesta
-    console.log(`Regenerando respuesta ${index}`);
+  const handleRegenerateResponse = async (index: number) => {
+    try {
+      // Encontrar el mensaje del usuario anterior a la respuesta de la IA
+      const userMessageIndex = index - 1;
+      if (
+        userMessageIndex >= 0 &&
+        messages[userMessageIndex]?.role === "user"
+      ) {
+        const userMessage = messages[userMessageIndex];
+
+        // Eliminar la respuesta actual y las siguientes
+        const messagesToKeep = messages.slice(0, userMessageIndex + 1);
+        setMessages(messagesToKeep);
+
+        // Reenviar el mensaje del usuario para regenerar la respuesta
+        const userContent = userMessage.content;
+
+        if (userContent) {
+          // Crear mensaje de carga
+          const loadingMessage = {
+            id: `loading-${Date.now()}`,
+            role: "assistant" as const,
+            content: "Regenerando respuesta...",
+            createdAt: new Date(),
+          };
+
+          setMessages([...messagesToKeep, loadingMessage]);
+
+          // Llamar a la API de chat para regenerar
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messages: messagesToKeep.map((msg) => ({
+                role: msg.role,
+                content: msg.content,
+              })),
+              model: selectedModel,
+              conversationId: currentConversation?.id,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Error al regenerar respuesta");
+          }
+
+          const data = await response.json();
+
+          // Reemplazar mensaje de carga con la respuesta real
+          const updatedMessages = messagesToKeep.map((msg) =>
+            msg.id === loadingMessage.id
+              ? { ...msg, content: data.content, id: data.id || msg.id }
+              : msg
+          );
+
+          setMessages(updatedMessages);
+
+          // Actualizar en Firebase si hay conversación activa
+          if (currentConversation?.id && data.content) {
+            await addMessage(currentConversation.id, {
+              role: "assistant",
+              content: data.content,
+            });
+          }
+
+          toast.success("Respuesta regenerada correctamente");
+        }
+      }
+    } catch (error) {
+      console.error("Error regenerating response:", error);
+      toast.error("Error al regenerar la respuesta");
+
+      // Revertir cambios en caso de error
+      setMessages(messages);
+    }
   };
 
-  const handleFeedback = (index: number, type: "positive" | "negative") => {
-    // Aquí implementarías la lógica para el feedback
-    console.log(`Feedback ${type} para mensaje ${index}`);
+  const handleFeedback = async (index: number, type: "positive" | "negative") => {
+    try {
+      const message = messages[index];
+      if (!message) return;
+
+      // Preparar datos del feedback
+      const feedbackData = {
+        messageId: message.id,
+        conversationId: currentConversation?.id,
+        userId: user?.uid,
+        type: type,
+        content: message.content,
+        model: selectedModel,
+        timestamp: new Date(),
+        metadata: {
+          responseTime: 0, // Se podría calcular si se tiene el tiempo de respuesta
+          tokensUsed: (message as any).metadata?.tokens?.output || 0,
+          contextLength: messages.length,
+        },
+      };
+
+      // Enviar feedback a Firebase
+      await submitFeedback(feedbackData);
+
+      // Mostrar confirmación visual
+      const feedbackMessage =
+        type === "positive"
+          ? "¡Gracias por tu feedback positivo!"
+          : "Gracias por tu feedback. Mejoraremos.";
+
+      toast.success(feedbackMessage);
+    } catch (error) {
+      console.error("Error sending feedback:", error);
+      toast.error("Error al enviar feedback");
+    }
   };
 
   const handleShareMessage = (index: number) => {
@@ -536,6 +724,109 @@ const Chat = React.memo(function Chat({
         title: "Mensaje de Rubi",
         text: message.content,
       });
+    }
+  };
+
+  const handleShareConversation = async () => {
+    try {
+      if (!currentConversation) {
+        toast.error("No hay conversación para compartir");
+        return;
+      }
+
+      // Crear contenido para compartir
+      const conversationTitle = currentConversation.title || "Conversación con Rubi";
+      const messagesText = messages
+        .filter(msg => msg.role !== "system")
+        .map(msg => `${msg.role === "user" ? "Tú" : "Rubi"}: ${msg.content}`)
+        .join("\n\n");
+
+      const shareText = `${conversationTitle}\n\n${messagesText}\n\n---\nCompartido desde Rubi AI`;
+
+      // Intentar usar Web Share API
+      if (navigator.share) {
+        await navigator.share({
+          title: conversationTitle,
+          text: shareText,
+        });
+        toast.success("Conversación compartida");
+      } else {
+        // Fallback: copiar al portapapeles
+        await navigator.clipboard.writeText(shareText);
+        toast.success("Conversación copiada al portapapeles");
+      }
+    } catch (error) {
+      console.error("Error sharing conversation:", error);
+      toast.error("Error al compartir la conversación");
+    }
+  };
+
+  const handleArchiveConversation = async () => {
+    try {
+      if (!currentConversation?.id) {
+        toast.error("No hay conversación para archivar");
+        return;
+      }
+
+      // Usar la función del contexto para archivar
+      await archiveConversation(currentConversation.id);
+      toast.success("Conversación archivada");
+      
+      // Redirigir a nueva conversación
+      router.push("/chat");
+    } catch (error) {
+      console.error("Error archiving conversation:", error);
+      toast.error("Error al archivar la conversación");
+    }
+  };
+
+  const handleReportConversation = async () => {
+    try {
+      if (!currentConversation?.id) {
+        toast.error("No hay conversación para reportar");
+        return;
+      }
+
+      // Crear reporte en Firebase
+      const reportData = {
+        conversationId: currentConversation.id,
+        userId: user?.uid,
+        reason: "Problema reportado por el usuario",
+        category: "other" as const,
+        details: `Conversación: ${currentConversation.title || "Sin título"}`,
+      };
+
+      // Enviar reporte a Firebase
+      await submitReport(reportData);
+      
+      toast.success("Problema reportado. Gracias por tu feedback.");
+    } catch (error) {
+      console.error("Error reporting conversation:", error);
+      toast.error("Error al reportar el problema");
+    }
+  };
+
+  const handleDeleteConversation = async () => {
+    try {
+      if (!currentConversation?.id) {
+        toast.error("No hay conversación para eliminar");
+        return;
+      }
+
+      // Confirmar eliminación
+      if (!confirm("¿Estás seguro de que quieres eliminar esta conversación? Esta acción no se puede deshacer.")) {
+        return;
+      }
+
+      // Usar la función del contexto para eliminar
+      await deleteConversationById(currentConversation.id);
+      toast.success("Conversación eliminada");
+      
+      // Redirigir a nueva conversación
+      router.push("/chat");
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      toast.error("Error al eliminar la conversación");
     }
   };
 
@@ -596,10 +887,24 @@ const Chat = React.memo(function Chat({
     ]
   );
 
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
+  };
+
+  // Función para hacer scroll suave al fondo
+  const scrollToBottomSmooth = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+  };
+
   return (
     <div className="flex-1 flex flex-col h-screen">
       {/* Top Bar - Más minimalista y fino */}
-      <div className="flex items-center justify-between pl-3 pr-1 py-1.5 bg-gray-900">
+      <div className="flex items-center justify-between pl-3 pr-1 py-1.5 bg-gray-900 relative">
         {/* Lado izquierdo - Selector de modelos en desktop, botón menú en mobile */}
         <div className="flex items-center space-x-2">
           {/* Botón menú en mobile */}
@@ -630,8 +935,9 @@ const Chat = React.memo(function Chat({
           </button>
 
           <button
+            onClick={handleShareConversation}
             className="p-1.5 hover:bg-gray-800 rounded-md transition-colors"
-            title="Compartir"
+            title="Compartir conversación"
           >
             <ShareIcon className="w-5 h-5 text-gray-400" />
           </button>
@@ -648,15 +954,21 @@ const Chat = React.memo(function Chat({
               <ActionsMenu
                 isOpen={isActionsMenuOpen}
                 onClose={() => setIsActionsMenuOpen(false)}
+                onArchive={handleArchiveConversation}
+                onReport={handleReportConversation}
+                onDelete={handleDeleteConversation}
               />
             )}
           </div>
         </div>
+
+        {/* Línea separadora perfectamente alineada con la parte inferior del header */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-700"></div>
       </div>
 
       {/* Chat Messages */}
       <div
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+        className="flex-1 overflow-y-auto px-4 py-4 pb-20 space-y-4"
         ref={messagesContainerRef}
       >
         {messages.length === 0 ? (
@@ -680,6 +992,17 @@ const Chat = React.memo(function Chat({
           />
         )}
       </div>
+
+      {/* Botón flotante "Ir a último mensaje" */}
+      {showScrollToBottom && (
+        <button
+          onClick={scrollToBottomSmooth}
+          className="fixed bottom-24 right-4 p-3 bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 text-white rounded-full shadow-lg hover:shadow-gray-500/25 transition-all duration-200 z-50 border border-gray-700"
+          title="Ir al último mensaje"
+        >
+          <ChevronDown className="w-5 h-5" />
+        </button>
+      )}
 
       {/* Chat Input */}
       <ChatInput

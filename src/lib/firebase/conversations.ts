@@ -38,6 +38,8 @@ export interface ConversationSummary {
   updatedAt: Date;
   messageCount: number;
   model?: string;
+  isPinned?: boolean;
+  isArchived?: boolean;
 }
 
 // Crear una nueva conversación
@@ -77,12 +79,61 @@ export const createConversation = async (
 
 // Obtener todas las conversaciones de un usuario
 export const getUserConversations = async (
+  userId: string,
+  includeArchived: boolean = false
+): Promise<ConversationSummary[]> => {
+  try {
+    let q;
+    if (includeArchived) {
+      // Obtener todas las conversaciones (incluyendo archivadas)
+      q = query(
+        collection(db, "conversations"),
+        where("userId", "==", userId),
+        orderBy("updatedAt", "desc")
+      );
+    } else {
+      // Obtener solo conversaciones no archivadas
+      q = query(
+        collection(db, "conversations"),
+        where("userId", "==", userId),
+        where("isArchived", "==", false),
+        orderBy("updatedAt", "desc")
+      );
+    }
+
+    const querySnapshot = await getDocs(q);
+    const conversations: ConversationSummary[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      conversations.push({
+        id: doc.id,
+        title: data.title,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+        messageCount: data.messages?.length || 0,
+        model: data.model,
+        isPinned: data.isPinned || false,
+        isArchived: data.isArchived || false,
+      });
+    });
+
+    return conversations;
+  } catch (error) {
+    console.error("Error getting user conversations:", error);
+    throw error;
+  }
+};
+
+// Obtener conversaciones archivadas de un usuario
+export const getArchivedConversations = async (
   userId: string
 ): Promise<ConversationSummary[]> => {
   try {
     const q = query(
       collection(db, "conversations"),
       where("userId", "==", userId),
+      where("isArchived", "==", true),
       orderBy("updatedAt", "desc")
     );
 
@@ -98,12 +149,14 @@ export const getUserConversations = async (
         updatedAt: data.updatedAt?.toDate() || new Date(),
         messageCount: data.messages?.length || 0,
         model: data.model,
+        isPinned: data.isPinned || false,
+        isArchived: data.isArchived || false,
       });
     });
 
     return conversations;
   } catch (error) {
-    console.error("Error getting user conversations:", error);
+    console.error("Error getting archived conversations:", error);
     throw error;
   }
 };
@@ -244,6 +297,99 @@ export const updateConversationModel = async (
     });
   } catch (error) {
     console.error("Error updating conversation model:", error);
+    throw error;
+  }
+};
+
+export const updateConversationPin = async (
+  conversationId: string,
+  isPinned: boolean
+): Promise<void> => {
+  try {
+    const docRef = doc(db, "conversations", conversationId);
+    await updateDoc(docRef, {
+      isPinned,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error updating conversation pin:", error);
+    throw error;
+  }
+};
+
+export const updateConversationArchive = async (
+  conversationId: string,
+  isArchived: boolean
+): Promise<void> => {
+  try {
+    const docRef = doc(db, "conversations", conversationId);
+    await updateDoc(docRef, {
+      isArchived,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error updating conversation archive:", error);
+    throw error;
+  }
+};
+
+export const updateMessageInConversation = async (
+  conversationId: string,
+  messageId: string,
+  newContent: string
+): Promise<void> => {
+  try {
+    const conversationRef = doc(db, "conversations", conversationId);
+    const conversationDoc = await getDoc(conversationRef);
+    
+    if (!conversationDoc.exists()) {
+      throw new Error("Conversación no encontrada");
+    }
+    
+    const conversationData = conversationDoc.data();
+    const messages = conversationData.messages || [];
+    
+    // Encontrar y actualizar el mensaje específico
+    const updatedMessages = messages.map((msg: any) => 
+      msg.id === messageId ? { ...msg, content: newContent } : msg
+    );
+    
+    // Actualizar la conversación
+    await updateDoc(conversationRef, {
+      messages: updatedMessages,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error updating message in conversation:", error);
+    throw error;
+  }
+};
+
+export const deleteMessageFromConversation = async (
+  conversationId: string,
+  messageId: string
+): Promise<void> => {
+  try {
+    const conversationRef = doc(db, "conversations", conversationId);
+    const conversationDoc = await getDoc(conversationRef);
+    
+    if (!conversationDoc.exists()) {
+      throw new Error("Conversación no encontrada");
+    }
+    
+    const conversationData = conversationDoc.data();
+    const messages = conversationData.messages || [];
+    
+    // Filtrar el mensaje a eliminar
+    const updatedMessages = messages.filter((msg: any) => msg.id !== messageId);
+    
+    // Actualizar la conversación
+    await updateDoc(conversationRef, {
+      messages: updatedMessages,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error deleting message from conversation:", error);
     throw error;
   }
 };

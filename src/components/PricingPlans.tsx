@@ -21,6 +21,7 @@ import ParticlesBackground from "@/components/ParticlesBackground";
 interface Plan {
   id: string;
   name: string;
+  tagline?: string;
   price: number;
   interval: "month" | "year";
   features: string[];
@@ -34,6 +35,7 @@ const plans: Plan[] = [
   {
     id: "free",
     name: "Gratis",
+    tagline: "Ideal para probar; hasta 5 chats/día",
     price: 0,
     interval: "month",
     features: [
@@ -49,6 +51,7 @@ const plans: Plan[] = [
   {
     id: "plus",
     name: "Plus",
+    tagline: "Impulsa tu día a día; chats ilimitados",
     price: 14.99,
     interval: "month",
     features: [
@@ -67,6 +70,7 @@ const plans: Plan[] = [
   {
     id: "pro",
     name: "Pro",
+    tagline: "Para equipos; API y analítica avanzada",
     price: 159.99,
     interval: "month",
     features: [
@@ -117,7 +121,7 @@ export default function PricingPlans({
             className="text-center mb-16"
           >
             <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
-              Elige tu plan perfecto
+              Elige tu plan y comienza a ahorrar horas cada día
             </h2>
             <p className="text-gray-400 text-xl max-w-2xl mx-auto">
               Comienza gratis y mejora cuando lo necesites. Todos los planes
@@ -162,7 +166,7 @@ export default function PricingPlans({
                 transition={{ duration: 2, repeat: Infinity }}
                 className="text-xs bg-green-600 text-white px-2 py-1 rounded-full"
               >
-                -33%
+                Ahorra 33%
               </motion.span>
             </motion.button>
           </div>
@@ -241,6 +245,11 @@ export default function PricingPlans({
                   <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2 sm:mb-3 lg:mb-4">
                     {plan.name}
                   </h3>
+                  {plan.tagline && (
+                    <p className="text-sm sm:text-base text-gray-400 mb-2 sm:mb-3 lg:mb-4">
+                      {plan.tagline}
+                    </p>
+                  )}
                   <div className="mb-4 sm:mb-6 lg:mb-8">
                     <span className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white break-words">
                       {plan.price === 0
@@ -299,12 +308,17 @@ export default function PricingPlans({
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center mt-16 text-gray-400 text-base"
+          className="text-center mt-20 mb-8 max-w-2xl mx-auto"
         >
-          <p className="mb-2">
+          <p className="mb-3 font-medium text-green-400 text-lg">
+            14 días de prueba gratuita – Sin compromisos
+          </p>
+          <p className="mb-2 text-gray-300">
             Puedes cambiar o cancelar tu plan en cualquier momento
           </p>
-          <p>Todos los planes incluyen acceso completo a la IA</p>
+          <p className="text-gray-400">
+            Todos los planes incluyen acceso completo a la IA
+          </p>
         </motion.div>
       </div>
     </div>

@@ -20,7 +20,7 @@ export default function FloatingCTA() {
         onClick={() => router.push("/register")}
         className="bg-gradient-to-r from-gray-800 to-gray-900 text-white px-6 py-3 rounded-full font-semibold shadow-2xl flex items-center space-x-2 text-sm border border-gray-700"
       >
-        <span>Comenzar gratis</span>
+        <span>Empieza gratis hoy</span>
         <ArrowUp className="w-4 h-4" />
       </motion.button>
     </motion.div>

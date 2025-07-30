@@ -9,6 +9,7 @@ import { ImageLibraryProvider } from "@/contexts/ImageLibraryContext";
 import { Toaster } from "react-hot-toast";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import { FirebaseErrorBanner } from "@/components/FirebaseErrorBanner";
+import { Providers } from "./providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -53,29 +54,31 @@ export default function RootLayout({
         className={`${inter.variable} ${spaceGrotesk.variable} bg-gray-900 text-white antialiased`}
       >
         <PerformanceMonitor componentName="RootLayout">
-          <AuthProvider>
-            <SettingsProvider>
-              <ConversationsProvider>
-                <PlanProvider>
-                  <ImageLibraryProvider>
-                    <FirebaseErrorBanner />
-                    {children}
-                    <Toaster
-                      position="top-right"
-                      toastOptions={{
-                        duration: 4000,
-                        style: {
-                          background: "#1f2937",
-                          color: "#fff",
-                          border: "1px solid #374151",
-                        },
-                      }}
-                    />
-                  </ImageLibraryProvider>
-                </PlanProvider>
-              </ConversationsProvider>
-            </SettingsProvider>
-          </AuthProvider>
+          <Providers>
+            <AuthProvider>
+              <SettingsProvider>
+                <ConversationsProvider>
+                  <PlanProvider>
+                    <ImageLibraryProvider>
+                      <FirebaseErrorBanner />
+                      {children}
+                      <Toaster
+                        position="top-right"
+                        toastOptions={{
+                          duration: 4000,
+                          style: {
+                            background: "#1f2937",
+                            color: "#fff",
+                            border: "1px solid #374151",
+                          },
+                        }}
+                      />
+                    </ImageLibraryProvider>
+                  </PlanProvider>
+                </ConversationsProvider>
+              </SettingsProvider>
+            </AuthProvider>
+          </Providers>
         </PerformanceMonitor>
       </body>
     </html>

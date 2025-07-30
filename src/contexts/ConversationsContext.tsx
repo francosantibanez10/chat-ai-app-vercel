@@ -17,15 +17,19 @@ import {
   createConversation,
   getConversation,
   getUserConversations,
+  getArchivedConversations,
   addMessageToConversation,
   updateConversationTitle,
   deleteConversation,
   updateConversationModel,
+  updateConversationPin,
+  updateConversationArchive,
 } from "@/lib/firebase/conversations";
 import { toast } from "react-hot-toast";
 
 interface ConversationsContextType {
   conversations: ConversationSummary[];
+  archivedConversations: ConversationSummary[];
   currentConversation: Conversation | null;
   isLoading: boolean;
   error: string | null;
@@ -41,11 +45,14 @@ interface ConversationsContextType {
   deleteConversationById: (conversationId: string) => Promise<void>;
   updateModel: (conversationId: string, model: string) => Promise<void>;
   refreshConversations: () => Promise<void>;
+  refreshArchivedConversations: () => Promise<void>;
   clearCurrentConversation: () => void;
 
   // Nuevas acciones
   shareConversation: (conversationId: string) => Promise<void>;
   archiveConversation: (conversationId: string) => Promise<void>;
+  unarchiveConversation: (conversationId: string) => Promise<void>;
+  pinConversation: (conversationId: string) => Promise<void>;
 }
 
 const ConversationsContext = createContext<
@@ -71,6 +78,9 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
 }) => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [archivedConversations, setArchivedConversations] = useState<
+    ConversationSummary[]
+  >([]);
   const [currentConversation, setCurrentConversation] =
     useState<Conversation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -81,11 +91,23 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
   const refreshConversations = useCallback(async () => {
     if (!user?.uid) return;
     try {
-      const userConversations = await getUserConversations(user.uid);
+      const userConversations = await getUserConversations(user.uid, false);
       setConversations(userConversations);
     } catch (err) {
       console.error("Error refreshing conversations:", err);
       setError("Error al cargar conversaciones");
+    }
+  }, [user?.uid]);
+
+  // Función para refrescar conversaciones archivadas
+  const refreshArchivedConversations = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const archivedConversations = await getArchivedConversations(user.uid);
+      setArchivedConversations(archivedConversations);
+    } catch (err) {
+      console.error("Error refreshing archived conversations:", err);
+      setError("Error al cargar conversaciones archivadas");
     }
   }, [user?.uid]);
 
@@ -230,19 +252,159 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
   }, []);
 
   const shareConversation = useCallback(async (conversationId: string) => {
-    // Implementar lógica de compartir
-    console.log("Sharing conversation:", conversationId);
+    try {
+      // Cargar la conversación completa
+      const conversation = await getConversation(conversationId);
+      if (!conversation) {
+        toast.error("Conversación no encontrada");
+        return;
+      }
+
+      // Crear un objeto con la información de la conversación
+      const shareData = {
+        title: conversation.title,
+        messages: conversation.messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+        createdAt: conversation.createdAt,
+        model: conversation.model,
+      };
+
+      // Convertir a JSON y crear un blob
+      const jsonString = JSON.stringify(shareData, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+
+      // Crear URL del blob
+      const url = URL.createObjectURL(blob);
+
+      // Crear enlace de descarga
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${conversation.title
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase()}_conversation.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      // Limpiar URL
+      URL.revokeObjectURL(url);
+
+      toast.success("Conversación exportada como JSON");
+    } catch (err) {
+      console.error("Error sharing conversation:", err);
+      toast.error("Error al exportar conversación");
+    }
   }, []);
 
-  const archiveConversation = useCallback(async (conversationId: string) => {
-    // Implementar lógica de archivar
-    console.log("Archiving conversation:", conversationId);
-  }, []);
+  const archiveConversation = useCallback(
+    async (conversationId: string) => {
+      if (!user?.uid) return;
+      try {
+        // Encontrar la conversación actual
+        const conversation = conversations.find((c) => c.id === conversationId);
+        if (!conversation) return;
+
+        // Actualizar el estado local inmediatamente para UI responsiva
+        setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+        setArchivedConversations((prev) => [conversation, ...prev]);
+
+        // Persistir en Firebase
+        await updateConversationArchive(conversationId, true);
+
+        toast.success("Conversación archivada");
+      } catch (err) {
+        console.error("Error archiving conversation:", err);
+        toast.error("Error al archivar conversación");
+
+        // Revertir el estado local si falla
+        setConversations((prev) => [...prev, conversation]);
+        setArchivedConversations((prev) =>
+          prev.filter((c) => c.id !== conversationId)
+        );
+      }
+    },
+    [user?.uid, conversations]
+  );
+
+  const unarchiveConversation = useCallback(
+    async (conversationId: string) => {
+      if (!user?.uid) return;
+      try {
+        // Encontrar la conversación archivada
+        const conversation = archivedConversations.find(
+          (c) => c.id === conversationId
+        );
+        if (!conversation) return;
+
+        // Actualizar el estado local inmediatamente para UI responsiva
+        setArchivedConversations((prev) =>
+          prev.filter((c) => c.id !== conversationId)
+        );
+        setConversations((prev) => [conversation, ...prev]);
+
+        // Persistir en Firebase
+        await updateConversationArchive(conversationId, false);
+
+        toast.success("Conversación desarchivada");
+      } catch (err) {
+        console.error("Error unarchiving conversation:", err);
+        toast.error("Error al desarchivar conversación");
+
+        // Revertir el estado local si falla
+        setArchivedConversations((prev) => [...prev, conversation]);
+        setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      }
+    },
+    [user?.uid, archivedConversations]
+  );
+
+  const pinConversation = useCallback(
+    async (conversationId: string) => {
+      if (!user?.uid) return;
+      try {
+        // Encontrar la conversación actual
+        const conversation = conversations.find((c) => c.id === conversationId);
+        if (!conversation) return;
+
+        // Toggle el estado de pin
+        const isCurrentlyPinned = conversation.isPinned || false;
+        const newPinState = !isCurrentlyPinned;
+
+        // Actualizar el estado local inmediatamente para UI responsiva
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === conversationId ? { ...c, isPinned: newPinState } : c
+          )
+        );
+
+        // Persistir en Firebase
+        await updateConversationPin(conversationId, newPinState);
+
+        toast.success(
+          newPinState ? "Conversación anclada" : "Conversación desanclada"
+        );
+      } catch (err) {
+        console.error("Error pinning conversation:", err);
+        toast.error("Error al anclar conversación");
+
+        // Revertir el estado local si falla
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === conversationId ? { ...c, isPinned: !c.isPinned } : c
+          )
+        );
+      }
+    },
+    [user?.uid, conversations]
+  );
 
   // Memoizar el valor del contexto para evitar re-renderizados
   const contextValue = useMemo(
     () => ({
       conversations,
+      archivedConversations,
       currentConversation,
       isLoading,
       error,
@@ -253,12 +415,16 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
       deleteConversationById,
       updateModel,
       refreshConversations,
+      refreshArchivedConversations,
       clearCurrentConversation,
       shareConversation,
       archiveConversation,
+      unarchiveConversation,
+      pinConversation,
     }),
     [
       conversations,
+      archivedConversations,
       currentConversation,
       isLoading,
       error,
@@ -269,9 +435,12 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
       deleteConversationById,
       updateModel,
       refreshConversations,
+      refreshArchivedConversations,
       clearCurrentConversation,
       shareConversation,
       archiveConversation,
+      unarchiveConversation,
+      pinConversation,
     ]
   );
 
@@ -279,6 +448,7 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
   useEffect(() => {
     if (!user?.uid) {
       setConversations([]);
+      setArchivedConversations([]);
       setCurrentConversation(null);
       setHasLoaded(false);
       return;
@@ -287,8 +457,14 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
     if (!hasLoaded) {
       setHasLoaded(true);
       refreshConversations();
+      refreshArchivedConversations();
     }
-  }, [user?.uid, hasLoaded, refreshConversations]);
+  }, [
+    user?.uid,
+    hasLoaded,
+    refreshConversations,
+    refreshArchivedConversations,
+  ]);
 
   return (
     <ConversationsContext.Provider value={contextValue}>

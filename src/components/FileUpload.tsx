@@ -11,7 +11,7 @@ interface FileUploadProps {
 interface FilePreview {
   file: File;
   preview: string;
-  type: 'image' | 'document' | 'other';
+  type: "image" | "document" | "other";
 }
 
 export default function FileUpload({ onFileSelect, onClose }: FileUploadProps) {
@@ -47,25 +47,28 @@ export default function FileUpload({ onFileSelect, onClose }: FileUploadProps) {
 
   const handleFiles = (files: FileList) => {
     const newFiles: FilePreview[] = [];
-    
-    Array.from(files).forEach(file => {
-      const type = file.type.startsWith('image/') ? 'image' : 
-                   file.type.includes('document') || file.type.includes('text') ? 'document' : 'other';
-      
-      const preview = type === 'image' ? URL.createObjectURL(file) : '';
-      
+
+    Array.from(files).forEach((file) => {
+      const type = file.type.startsWith("image/")
+        ? "image"
+        : file.type.includes("document") || file.type.includes("text")
+        ? "document"
+        : "other";
+
+      const preview = type === "image" ? URL.createObjectURL(file) : "";
+
       newFiles.push({
         file,
         preview,
-        type
+        type,
       });
     });
 
-    setSelectedFiles(prev => [...prev, ...newFiles]);
+    setSelectedFiles((prev) => [...prev, ...newFiles]);
   };
 
   const removeFile = (index: number) => {
-    setSelectedFiles(prev => {
+    setSelectedFiles((prev) => {
       const newFiles = [...prev];
       if (newFiles[index].preview) {
         URL.revokeObjectURL(newFiles[index].preview);
@@ -76,32 +79,35 @@ export default function FileUpload({ onFileSelect, onClose }: FileUploadProps) {
   };
 
   const handleUpload = () => {
-    selectedFiles.forEach(filePreview => {
+    selectedFiles.forEach((filePreview) => {
       onFileSelect(filePreview.file);
     });
     onClose();
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) return <Image className="w-4 h-4" />;
-    if (type.includes('document') || type.includes('text')) return <FileText className="w-4 h-4" />;
+    if (type.startsWith("image/")) return <Image className="w-4 h-4" />;
+    if (type.includes("document") || type.includes("text"))
+      return <FileText className="w-4 h-4" />;
     return <FileText className="w-4 h-4" />;
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
       <div className="bg-gray-900 border border-gray-700 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-200">Subir archivos</h3>
+          <h3 className="text-lg font-semibold text-gray-200">
+            Subir archivos
+          </h3>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-800 rounded transition-colors"
@@ -115,8 +121,8 @@ export default function FileUpload({ onFileSelect, onClose }: FileUploadProps) {
           {/* Drag & Drop Area */}
           <div
             className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-              dragActive 
-                ? "border-gray-500 bg-gray-500 bg-opacity-10" 
+              dragActive
+                ? "border-gray-500 bg-gray-500 bg-opacity-10"
                 : "border-gray-600 hover:border-gray-500"
             }`}
             onDragEnter={handleDrag}
@@ -159,7 +165,7 @@ export default function FileUpload({ onFileSelect, onClose }: FileUploadProps) {
                     key={index}
                     className="flex items-center space-x-3 p-3 bg-gray-800 rounded-lg"
                   >
-                    {filePreview.type === 'image' ? (
+                    {filePreview.type === "image" ? (
                       <img
                         src={filePreview.preview}
                         alt={filePreview.file.name}
@@ -211,4 +217,4 @@ export default function FileUpload({ onFileSelect, onClose }: FileUploadProps) {
       </div>
     </div>
   );
-} 
+}

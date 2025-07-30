@@ -6,9 +6,18 @@ import { Archive, Flag, Trash2 } from "lucide-react";
 interface ActionsMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  onArchive?: () => void;
+  onReport?: () => void;
+  onDelete?: () => void;
 }
 
-export default function ActionsMenu({ isOpen, onClose }: ActionsMenuProps) {
+export default function ActionsMenu({
+  isOpen,
+  onClose,
+  onArchive,
+  onReport,
+  onDelete,
+}: ActionsMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,20 +43,44 @@ export default function ActionsMenu({ isOpen, onClose }: ActionsMenuProps) {
       ref={menuRef}
     >
       <div className="p-1">
-        <button className="w-full flex items-center space-x-3 p-3 rounded-md text-gray-300 hover:bg-gray-800 transition-colors">
-          <Archive className="w-4 h-4" />
-          <span className="text-sm">Archivar</span>
-        </button>
+        {onArchive && (
+          <button 
+            onClick={() => {
+              onArchive();
+              onClose();
+            }}
+            className="w-full flex items-center space-x-3 p-3 rounded-md text-gray-300 hover:bg-gray-800 transition-colors"
+          >
+            <Archive className="w-4 h-4" />
+            <span className="text-sm">Archivar conversación</span>
+          </button>
+        )}
 
-        <button className="w-full flex items-center space-x-3 p-3 rounded-md text-gray-300 hover:bg-gray-800 transition-colors">
-          <Flag className="w-4 h-4" />
-          <span className="text-sm">Informar</span>
-        </button>
+        {onReport && (
+          <button 
+            onClick={() => {
+              onReport();
+              onClose();
+            }}
+            className="w-full flex items-center space-x-3 p-3 rounded-md text-gray-300 hover:bg-gray-800 transition-colors"
+          >
+            <Flag className="w-4 h-4" />
+            <span className="text-sm">Informar problema</span>
+          </button>
+        )}
 
-        <button className="w-full flex items-center space-x-3 p-3 rounded-md text-red-400 hover:bg-gray-800 transition-colors">
-          <Trash2 className="w-4 h-4" />
-          <span className="text-sm">Eliminar</span>
-        </button>
+        {onDelete && (
+          <button 
+            onClick={() => {
+              onDelete();
+              onClose();
+            }}
+            className="w-full flex items-center space-x-3 p-3 rounded-md text-red-400 hover:bg-gray-800 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="text-sm">Eliminar conversación</span>
+          </button>
+        )}
       </div>
     </div>
   );

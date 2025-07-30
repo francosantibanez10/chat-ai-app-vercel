@@ -3,11 +3,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Reglas para conversaciones
     match /conversations/{conversationId} {
-      // Permitir lectura y escritura solo al propietario de la conversación
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Permitir lectura solo al propietario de la conversación
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
       
-      // Permitir creación de nuevas conversaciones
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      // Permitir creación de nuevas conversaciones (más permisivo)
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId &&
+        request.resource.data.keys().hasAll(['title', 'userId', 'messages', 'createdAt', 'updatedAt', 'model']);
       
       // Permitir actualización solo al propietario
       allow update: if request.auth != null && request.auth.uid == resource.data.userId;
@@ -16,12 +18,24 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
-    // Reglas para usuarios (si los tienes)
+    // Reglas para usuarios
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Reglas para archivos subidos (si los tienes)
+    // Reglas para feedback
+    match /feedback/{feedbackId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // Reglas para reportes
+    match /reports/{reportId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // Reglas para archivos subidos
     match /uploads/{uploadId} {
       allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;

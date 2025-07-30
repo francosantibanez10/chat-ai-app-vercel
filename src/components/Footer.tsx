@@ -221,9 +221,9 @@ export default function Footer() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.8 }}
-          className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center"
+          className="border-t border-gray-800 pt-8 flex flex-col items-center"
         >
-          <div className="flex items-center text-gray-400 mb-4 md:mb-0">
+          <div className="flex items-center text-gray-400 mb-4">
             <span>© 2025 Rubi. Hecho con</span>
             <Heart className="w-4 h-4 mx-1 text-red-500 fill-current" />
             <span>en España</span>

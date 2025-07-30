@@ -351,36 +351,36 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgb(var(--muted));
+  background: #1f2937; /* gray-800 */
   border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(
     135deg,
-    rgb(var(--accent)),
-    rgba(var(--accent), 0.7)
+    #374151,
+    /* gray-700 */ #4b5563 /* gray-600 */
   );
   border-radius: 6px;
-  border: 2px solid rgb(var(--muted));
+  border: 2px solid #1f2937; /* gray-800 */
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     135deg,
-    rgba(var(--accent), 0.9),
-    rgb(var(--accent))
+    #4b5563,
+    /* gray-600 */ #6b7280 /* gray-500 */
   );
 }
 
 ::-webkit-scrollbar-corner {
-  background: rgb(var(--muted));
+  background: #1f2937; /* gray-800 */
 }
 
 /* Firefox Scrollbar */
 html {
   scrollbar-width: thin;
-  scrollbar-color: rgb(var(--accent)) rgb(var(--muted));
+  scrollbar-color: #4b5563 #1f2937; /* gray-600 gray-800 */
 }
 
 /* Keyframe Animations */
@@ -508,6 +508,13 @@ html {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     /* ✅ Removido scroll-behavior: auto !important; para evitar conflictos */
+  }
+
+  /* Excepción para el sidebar - mantener animaciones */
+  .sidebar-container,
+  .sidebar-container * {
+    transition-duration: unset !important;
+    animation-duration: unset !important;
   }
 }
 
@@ -708,4 +715,176 @@ html {
 
 .prose-premium a[href]:not([href=""]):hover {
   color: #93c5fd !important;
+}
+
+/* Mobile-specific styles */
+@supports (padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .pt-safe {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+
+  .pl-safe {
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+  }
+
+  .pr-safe {
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+  }
+}
+
+/* Fallback para navegadores que no soportan env() */
+@supports not (padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: 0.5rem;
+  }
+
+  .pt-safe {
+    padding-top: 0.5rem;
+  }
+
+  .pl-safe {
+    padding-left: 0.5rem;
+  }
+
+  .pr-safe {
+    padding-right: 0.5rem;
+  }
+}
+
+/* Mobile input optimizations */
+@media (max-width: 768px) {
+  /* Prevenir zoom en inputs en iOS */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Touch targets mínimos */
+  button,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Scroll suave en móvil */
+  .scroll-smooth-mobile {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Eliminar completamente bordes y outlines de textareas */
+textarea,
+textarea:focus,
+textarea:active,
+textarea:hover {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Reglas específicas para textareas en modo focus */
+textarea:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Reglas para react-textarea-autosize */
+.react-textarea-autosize {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.react-textarea-autosize:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Scrollbars */
+textarea::-webkit-scrollbar,
+.react-textarea-autosize::-webkit-scrollbar {
+  display: none !important;
+}
+
+textarea,
+.react-textarea-autosize {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Sidebar scrollbars */
+.sidebar-container {
+  overflow-x: hidden !important;
+}
+
+.sidebar-container::-webkit-scrollbar {
+  display: none !important;
+}
+
+.sidebar-container {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Sidebar menus - ensure they appear above everything */
+.sidebar-container [data-headlessui-state="open"] {
+  overflow: visible !important;
+}
+
+.sidebar-container [role="menu"] {
+  overflow: visible !important;
+  z-index: 9999 !important;
+}
+
+/* Ensure menu items are not clipped */
+.sidebar-container [data-headlessui-state="open"] [role="menuitem"] {
+  overflow: visible !important;
+}
+
+/* React Window scrollbars */
+.react-window-list {
+  overflow-x: hidden !important;
+}
+
+.react-window-list::-webkit-scrollbar {
+  display: none !important;
+}
+
+.react-window-list {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Individual conversation items */
+.conversation-item {
+  overflow: hidden !important;
+}
+
+.conversation-item::-webkit-scrollbar {
+  display: none !important;
+}
+
+.conversation-item {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* CSS específico para móvil - herramientas por encima del input fijo */
+@media (max-width: 768px) {
+  /* Espacio adicional para herramientas de acciones en móvil */
+  .flex-1.overflow-y-auto {
+    padding-bottom: 6rem !important;
+  }
 }
