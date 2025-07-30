@@ -371,7 +371,7 @@ const Chat = React.memo(function Chat({
     onResponse: onResponseCallback,
     body: {
       // Agregar datos adicionales al body de la request
-      conversationId: currentConversation?.id,
+      conversationId: conversationId || currentConversation?.id, // ✅ Usar conversationId de la URL primero
       userId: user?.uid,
       model: selectedModel,
     },
