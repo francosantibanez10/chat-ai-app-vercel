@@ -129,6 +129,12 @@ const Chat = React.memo(function Chat({
     if (conversationId && user?.uid) {
       console.log("🔧 [DEBUG] Chat: Cargando conversación", conversationId);
       loadConversation(conversationId);
+    } else if (!conversationId && user?.uid) {
+      // Si no hay conversationId, limpiar la conversación actual
+      console.log(
+        "🔧 [DEBUG] Chat: No hay conversationId, limpiando conversación"
+      );
+      // No hacer nada, dejar que se mantenga la conversación actual o crear una nueva
     }
   }, [conversationId, user?.uid, loadConversation]);
 
@@ -680,7 +686,10 @@ const Chat = React.memo(function Chat({
     }
   };
 
-  const handleFeedback = async (index: number, type: "positive" | "negative") => {
+  const handleFeedback = async (
+    index: number,
+    type: "positive" | "negative"
+  ) => {
     try {
       const message = messages[index];
       if (!message) return;
@@ -735,10 +744,11 @@ const Chat = React.memo(function Chat({
       }
 
       // Crear contenido para compartir
-      const conversationTitle = currentConversation.title || "Conversación con Rubi";
+      const conversationTitle =
+        currentConversation.title || "Conversación con Rubi";
       const messagesText = messages
-        .filter(msg => msg.role !== "system")
-        .map(msg => `${msg.role === "user" ? "Tú" : "Rubi"}: ${msg.content}`)
+        .filter((msg) => msg.role !== "system")
+        .map((msg) => `${msg.role === "user" ? "Tú" : "Rubi"}: ${msg.content}`)
         .join("\n\n");
 
       const shareText = `${conversationTitle}\n\n${messagesText}\n\n---\nCompartido desde Rubi AI`;
@@ -771,7 +781,7 @@ const Chat = React.memo(function Chat({
       // Usar la función del contexto para archivar
       await archiveConversation(currentConversation.id);
       toast.success("Conversación archivada");
-      
+
       // Redirigir a nueva conversación
       router.push("/chat");
     } catch (error) {
@@ -798,7 +808,7 @@ const Chat = React.memo(function Chat({
 
       // Enviar reporte a Firebase
       await submitReport(reportData);
-      
+
       toast.success("Problema reportado. Gracias por tu feedback.");
     } catch (error) {
       console.error("Error reporting conversation:", error);
@@ -814,14 +824,18 @@ const Chat = React.memo(function Chat({
       }
 
       // Confirmar eliminación
-      if (!confirm("¿Estás seguro de que quieres eliminar esta conversación? Esta acción no se puede deshacer.")) {
+      if (
+        !confirm(
+          "¿Estás seguro de que quieres eliminar esta conversación? Esta acción no se puede deshacer."
+        )
+      ) {
         return;
       }
 
       // Usar la función del contexto para eliminar
       await deleteConversationById(currentConversation.id);
       toast.success("Conversación eliminada");
-      
+
       // Redirigir a nueva conversación
       router.push("/chat");
     } catch (error) {

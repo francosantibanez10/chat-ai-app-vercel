@@ -171,7 +171,7 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
         setIsLoading(false);
       }
     },
-    [user?.uid, currentConversation?.id, isLoading]
+    [user?.uid] // ✅ Removidas las dependencias que causaban el bucle
   );
 
   const addMessage = useCallback(
