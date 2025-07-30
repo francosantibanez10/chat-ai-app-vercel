@@ -126,6 +126,11 @@ const Chat = React.memo(function Chat({
 
   // ✅ Cargar conversación cuando cambie el conversationId
   useEffect(() => {
+    console.log("🔧 [DEBUG] Chat: useEffect triggered", {
+      conversationId,
+      userId: user?.uid,
+    });
+
     if (conversationId && user?.uid) {
       console.log("🔧 [DEBUG] Chat: Cargando conversación", conversationId);
       loadConversation(conversationId);
@@ -486,6 +491,17 @@ const Chat = React.memo(function Chat({
       console.log("🔧 [DEBUG] Chat: Creando nueva conversación");
       try {
         const newChatId = await createNewConversation();
+        console.log(
+          "🔧 [DEBUG] Chat: Nueva conversación creada con ID:",
+          newChatId
+        );
+
+        // Guardar el mensaje en la nueva conversación
+        await addMessage(newChatId, {
+          role: "user",
+          content: input,
+        });
+
         // Redirigir a la nueva conversación
         router.push(`/chat/${newChatId}`);
         return;
@@ -512,7 +528,13 @@ const Chat = React.memo(function Chat({
     console.log("🔧 [DEBUG] Chat: Llamando a handleSubmit de useChat");
     const currentInput = input;
     setInput(""); // Limpiar input manualmente
-    handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
+
+    // Crear un nuevo evento para useChat
+    const formEvent = new Event("submit", {
+      bubbles: true,
+      cancelable: true,
+    }) as React.FormEvent<HTMLFormElement>;
+    handleSubmit(formEvent);
   };
 
   // Función para manejar envío con archivos
