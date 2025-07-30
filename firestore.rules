@@ -4,9 +4,10 @@ service cloud.firestore {
     // Reglas para conversaciones
     match /conversations/{conversationId} {
       // Permitir lectura solo al propietario de la conversación
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null && 
+        (resource == null || request.auth.uid == resource.data.userId);
       
-      // Permitir creación de nuevas conversaciones (más permisivo)
+      // Permitir creación de nuevas conversaciones
       allow create: if request.auth != null && 
         request.auth.uid == request.resource.data.userId &&
         request.resource.data.keys().hasAll(['title', 'userId', 'messages', 'createdAt', 'updatedAt', 'model']);
