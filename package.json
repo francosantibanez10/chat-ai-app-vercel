@@ -8,6 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "verify-firebase": "node scripts/verify-firebase-setup.js",
+    "check-firebase": "node scripts/check-firebase-config.js",
+    "build:production": "node scripts/build-production.js",
+    "test:chat": "node scripts/test-chat-api.js",
+    "build:firebase": "next build && next export",
+    "deploy:firebase": "npm run build:firebase && firebase deploy --only hosting",
+    "deploy:firebase:all": "npm run build:firebase && firebase deploy",
     "deploy-vercel": "vercel --prod",
     "deploy-vercel-dev": "vercel"
   },

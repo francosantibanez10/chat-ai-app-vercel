@@ -68,6 +68,9 @@ const Chat = React.memo(function Chat({
     feature: string;
   } | null>(null);
 
+  // Configuración para streaming optimizado
+  const [streamingOptimized, setStreamingOptimized] = useState(false);
+
   // Referencia para el contenedor de mensajes
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const currentConversationIdRef = useRef<string | null>(null);
@@ -286,6 +289,12 @@ const Chat = React.memo(function Chat({
       hasBody: !!response.body,
     });
 
+    // Verificar si el streaming está optimizado
+    const processingTime = response.headers.get("X-Processing-Time");
+    setStreamingOptimized(
+      processingTime ? parseInt(processingTime) < 1000 : false
+    );
+
     // Verificar si la respuesta es un archivo generado
     const contentType = response.headers.get("Content-Type");
     const fileType = response.headers.get("X-File-Type");
@@ -340,7 +349,7 @@ const Chat = React.memo(function Chat({
     }
   }, [messages]);
 
-  // Auto-scroll durante streaming - OPTIMIZADO
+  // Auto-scroll durante streaming - OPTIMIZADO para streaming fluido tipo máquina de escribir
   useEffect(() => {
     if (isLoading && messagesContainerRef.current) {
       const scrollToBottom = () => {
@@ -353,11 +362,11 @@ const Chat = React.memo(function Chat({
       // Scroll inmediato
       scrollToBottom();
 
-      // Scroll suave durante streaming
-      const interval = setInterval(scrollToBottom, 100);
+      // Scroll optimizado para streaming (cada 30ms para balance entre fluidez y rendimiento)
+      const interval = setInterval(scrollToBottom, 30);
       return () => clearInterval(interval);
     }
-  }, [isLoading]); // Removido messages de las dependencias
+  }, [isLoading, messages.length]); // Incluir messages.length para detectar nuevos tokens
 
   // Actualizar modelo cuando cambie - OPTIMIZADO
   useEffect(() => {

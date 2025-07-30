@@ -34,6 +34,7 @@ interface SidebarProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   onOpenPlans?: () => void;
+  onChatSelect?: (chatId: string) => void;
 }
 
 export default function Sidebar({
@@ -42,6 +43,7 @@ export default function Sidebar({
   collapsed = false,
   onToggleCollapse,
   onOpenPlans,
+  onChatSelect,
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const {
@@ -85,6 +87,8 @@ export default function Sidebar({
     try {
       await loadConversation(chatId);
       router.push(`/chat/${chatId}`);
+      // ✅ CERRAR SIDEBAR EN MÓVILES AL SELECCIONAR CHAT
+      onChatSelect?.(chatId);
     } catch (error) {
       console.error("Error loading chat:", error);
     }

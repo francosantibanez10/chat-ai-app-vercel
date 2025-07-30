@@ -5,10 +5,6 @@ import OpenAI from "openai";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function POST(request: NextRequest) {
   try {
     const { prompt } = await request.json();
@@ -19,6 +15,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Inicializar OpenAI solo cuando se necesita
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     // Generar imagen usando DALL-E 3
     const response = await openai.images.generate({

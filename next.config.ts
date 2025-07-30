@@ -1,21 +1,62 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Configuración para Vercel (sin exportación estática)
+  // Configuración para despliegue dinámico
+  output: "standalone", // Optimizado para contenedores y despliegue
+
+  // Configuración de imágenes
   images: {
-    domains: ["localhost", "rubiplus-651a7.web.app", "vercel.app"],
+    domains: [
+      "localhost",
+      "rubiplus-651a7.web.app",
+      "vercel.app",
+      "images.unsplash.com",
+      "firebasestorage.googleapis.com",
+    ],
+    unoptimized: false, // Habilitar optimización de imágenes
   },
-  // Deshabilitar ESLint durante el build
+
+  // Configuración de compilación
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: true, // Ignorar ESLint durante build para velocidad
   },
-  // Deshabilitar TypeScript checking durante el build
+
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true, // Ignorar errores de TypeScript durante build
   },
-  // Configuración para desarrollo y producción
-  experimental: {
-    appDir: true,
+
+  // Configuración de headers para seguridad
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "origin-when-cross-origin",
+          },
+        ],
+      },
+    ];
+  },
+
+  // Configuración de redirecciones
+  async redirects() {
+    return [
+      {
+        source: "/home",
+        destination: "/",
+        permanent: true,
+      },
+    ];
   },
 };
 

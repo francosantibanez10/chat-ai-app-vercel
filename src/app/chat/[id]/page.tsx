@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { X } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
@@ -14,8 +14,32 @@ export default function ChatWithIdPage() {
   const params = useParams();
   const id = params.id as string;
   const { currentConversation } = useConversations();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // ✅ DETECTAR SI ES MÓVIL: Cerrar sidebar automáticamente en móviles
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        // md breakpoint
+        setSidebarOpen(false);
+      }
+    };
+
+    // Cerrar sidebar en móviles al cargar
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // ✅ CERRAR SIDEBAR AL SELECCIONAR CHAT EN MÓVILES
+  const handleChatSelect = (chatId: string) => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
+
   const [showPlans, setShowPlans] = useState(false);
   const [checkoutModal, setCheckoutModal] = useState<{
     isOpen: boolean;
@@ -74,12 +98,20 @@ export default function ChatWithIdPage() {
             sidebarCollapsed ? "md:w-16" : "md:w-48 lg:w-52"
           } transition-all duration-300 ease-in-out`}
         >
+          {/* Overlay para cerrar sidebar en móviles */}
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
           <Sidebar
             selectedChatId={currentConversation?.id}
             onClose={() => setSidebarOpen(false)}
             collapsed={sidebarCollapsed}
             onToggleCollapse={toggleSidebar}
             onOpenPlans={handleOpenPlans}
+            onChatSelect={handleChatSelect}
           />
         </div>
 

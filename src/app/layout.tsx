@@ -8,6 +8,7 @@ import { PlanProvider } from "@/contexts/PlanContext";
 import { ImageLibraryProvider } from "@/contexts/ImageLibraryContext";
 import { Toaster } from "react-hot-toast";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
+import { FirebaseErrorBanner } from "@/components/FirebaseErrorBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -57,6 +58,7 @@ export default function RootLayout({
               <ConversationsProvider>
                 <PlanProvider>
                   <ImageLibraryProvider>
+                    <FirebaseErrorBanner />
                     {children}
                     <Toaster
                       position="top-right"

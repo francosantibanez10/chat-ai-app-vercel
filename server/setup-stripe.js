@@ -1,4 +1,4 @@
-const stripe = require('stripe')('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');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 async function setupStripeProducts() {
   try {

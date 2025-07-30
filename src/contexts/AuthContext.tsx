@@ -1,16 +1,16 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User, 
-  signInWithEmailAndPassword, 
+import { createContext, useContext, useEffect, useState } from "react";
+import {
+  User,
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup
-} from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+  signInWithPopup,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 interface AuthContextType {
   user: User | null;
@@ -19,6 +19,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  firebaseAvailable: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,17 +27,50 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [firebaseAvailable, setFirebaseAvailable] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    // Verificar si Firebase auth está disponible
+    if (!auth) {
+      console.warn(
+        "⚠️ Firebase Auth not available - authentication features will be disabled"
+      );
+      setFirebaseAvailable(false);
       setLoading(false);
-    });
+      return;
+    }
 
-    return unsubscribe;
+    setFirebaseAvailable(true);
+
+    try {
+      const unsubscribe = onAuthStateChanged(
+        auth,
+        (user) => {
+          setUser(user);
+          setLoading(false);
+        },
+        (error) => {
+          console.error("❌ Firebase Auth error:", error);
+          setFirebaseAvailable(false);
+          setLoading(false);
+        }
+      );
+
+      return unsubscribe;
+    } catch (error) {
+      console.error("❌ Firebase Auth initialization error:", error);
+      setFirebaseAvailable(false);
+      setLoading(false);
+    }
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    if (!auth || !firebaseAvailable) {
+      throw new Error(
+        "Firebase Auth is not available. Please check your configuration."
+      );
+    }
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
@@ -45,6 +79,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
+    if (!auth || !firebaseAvailable) {
+      throw new Error(
+        "Firebase Auth is not available. Please check your configuration."
+      );
+    }
+
     try {
       await createUserWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
@@ -53,6 +93,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (!auth || !firebaseAvailable) {
+      throw new Error(
+        "Firebase Auth is not available. Please check your configuration."
+      );
+    }
+
     try {
       await signOut(auth);
     } catch (error: any) {
@@ -61,6 +107,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    if (!auth || !firebaseAvailable) {
+      throw new Error(
+        "Firebase Auth is not available. Please check your configuration."
+      );
+    }
+
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
@@ -76,19 +128,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     logout,
     signInWithGoogle,
+    firebaseAvailable,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-} 
+}

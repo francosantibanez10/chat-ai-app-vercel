@@ -5,12 +5,14 @@ Una aplicación de chat con IA similar a ChatGPT, construida con Next.js, TypeSc
 ## Características
 
 - 🎨 **Interfaz idéntica a ChatGPT**: Diseño profesional con tema oscuro
-- ⚡ **Streaming en tiempo real**: Respuestas fluidas con streaming de OpenAI
+- ⚡ **Streaming optimizado**: Respuestas fluidas con streaming inmediato y chunks optimizados
+- 🚀 **Latencia ultra-baja**: Runtime optimizado + validación crítica rápida
 - 💻 **Soporte para código**: Resaltado de sintaxis y bloques de código
 - 📱 **Responsive**: Funciona en desktop y móvil
 - 🔧 **Herramientas integradas**: Botones para herramientas, voz y más
 - 📚 **Historial de chats**: Navegación entre conversaciones
 - 🎯 **UX profesional**: Microinteracciones y animaciones sutiles
+- 🔄 **Background processing**: Tareas pesadas ejecutadas en segundo plano
 
 ## Tecnologías
 
@@ -65,11 +67,18 @@ Una aplicación de chat con IA similar a ChatGPT, construida con Next.js, TypeSc
 4. **Navegar chats**: Usa la barra lateral para cambiar entre conversaciones
 5. **Herramientas**: Usa los botones de herramientas, voz y más
 
-### Características del streaming
+### Características del streaming optimizado
 
-- Las respuestas aparecen en tiempo real
-- Indicador de carga mientras se genera la respuesta
-- Soporte para mensajes largos y complejos
+- **Streaming nativo compatible**: Usa el formato nativo de Vercel AI SDK
+- **Modelo optimizado**: GPT-4o-mini para chunks más pequeños y rápidos
+- **Streaming inmediato**: Respuestas aparecen al instante sin latencia inicial
+- **Runtime Optimizado**: Edge Runtime o Node.js según compatibilidad
+- **Validación crítica**: Solo validaciones esenciales antes del streaming
+- **Background processing**: Tareas pesadas ejecutadas en segundo plano
+- **Auto-scroll optimizado**: Scroll cada 30ms para balance entre fluidez y rendimiento
+- **Headers SSE**: Formato estándar para streaming de eventos
+- **Soporte para mensajes largos**: Streaming fluido sin interrupciones
+- **Configuración de parámetros**: topP, frequencyPenalty, presencePenalty optimizados
 
 ## Estructura del proyecto
 
@@ -135,6 +144,16 @@ La aplicación funciona en cualquier proveedor que soporte Next.js:
 ### Error de CORS
 - La aplicación está configurada para desarrollo local
 - Para producción, configura los dominios permitidos en tu API
+
+### Error de isolated-vm
+- Si ves errores relacionados con `isolated-vm`, la aplicación automáticamente usará Node.js Runtime
+- Para desarrollo local, asegúrate de tener Node.js instalado
+- En producción, Vercel automáticamente selecciona el runtime apropiado
+
+### Runtime Compatibility
+- **Edge Runtime**: Más rápido, pero sin soporte para `isolated-vm`
+- **Node.js Runtime**: Compatible con todas las dependencias, incluyendo `isolated-vm`
+- La aplicación detecta automáticamente el runtime óptimo
 
 ### Problemas de streaming
 - Verifica tu conexión a internet

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -10,6 +10,7 @@ interface RichMessageRendererProps {
   content: string;
   className?: string;
   onExtractedBlocks?: (blocks: ExtractedBlock[]) => void;
+  isStreaming?: boolean; // ✅ Nuevo prop para modo streaming
 }
 
 interface ExtractedBlock {
@@ -421,239 +422,285 @@ export const ExtractedBlockRenderer: React.FC<{ block: ExtractedBlock }> = ({
 export { extractSpecialBlocks };
 export type { ExtractedBlock };
 
-export const RichMessageRenderer: React.FC<RichMessageRendererProps> = ({
-  content,
-  className = "",
-  onExtractedBlocks,
-}) => {
-  // Verificar que el contenido sea una cadena válida
-  if (typeof content !== "string") {
-    console.warn("RichMessageRenderer recibió contenido no válido:", content);
-    return (
-      <div
-        className={`text-sm leading-relaxed whitespace-pre-wrap ${className}`}
-      >
-        {String(content)}
-      </div>
-    );
-  }
-
-  // Extraer bloques especiales del contenido
-  const { mainContent, extractedBlocks } = extractSpecialBlocks(content);
-
-  // Llamar a la función de callback si está presente
-  if (onExtractedBlocks) {
-    onExtractedBlocks(extractedBlocks);
-  }
-
-  // Función para extraer texto limpio de props.children
-  const extractCleanText = (children: any): string => {
-    if (typeof children === "string") {
-      return children;
+// Versión optimizada del RichMessageRenderer para streaming fluido
+export const RichMessageRenderer = React.memo<RichMessageRendererProps>(
+  ({ content, className = "", onExtractedBlocks, isStreaming = false }) => {
+    // Verificar que el contenido sea una cadena válida
+    if (typeof content !== "string") {
+      console.warn("RichMessageRenderer recibió contenido no válido:", content);
+      return (
+        <div
+          className={`text-sm leading-relaxed whitespace-pre-wrap ${className}`}
+        >
+          {String(content)}
+        </div>
+      );
     }
-    if (Array.isArray(children)) {
-      return children.map((child) => extractCleanText(child)).join("");
+
+    // ✅ MODO STREAMING LIGERO: Renderizar texto plano durante streaming
+    if (isStreaming) {
+      return (
+        <pre className={`whitespace-pre-wrap text-gray-100 ${className}`}>
+          {content}
+        </pre>
+      );
     }
-    if (children && typeof children === "object" && children.props) {
-      return extractCleanText(children.props.children);
-    }
-    return String(children);
-  };
 
-  return (
-    <div className={`prose-premium max-w-none space-y-6 ${className}`}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight, rehypeRaw]}
-        components={{
-          // Títulos con jerarquía visual premium
-          h1: ({ node, ...props }) => (
-            <h1
-              className="text-3xl font-bold mt-8 mb-6 text-white border-b border-gray-700 pb-3 leading-tight"
-              {...props}
-            />
-          ),
-          h2: ({ node, ...props }) => (
-            <h2
-              className="text-2xl font-semibold mt-6 mb-4 text-white leading-tight"
-              {...props}
-            />
-          ),
-          h3: ({ node, ...props }) => (
-            <h3
-              className="text-xl font-medium mt-5 mb-3 text-white leading-tight"
-              {...props}
-            />
-          ),
-          h4: ({ node, ...props }) => (
-            <h4
-              className="text-lg font-medium mt-4 mb-2 text-white leading-tight"
-              {...props}
-            />
-          ),
-          h5: ({ node, ...props }) => (
-            <h5
-              className="text-base font-medium mt-3 mb-2 text-white leading-tight"
-              {...props}
-            />
-          ),
-          h6: ({ node, ...props }) => (
-            <h6
-              className="text-sm font-medium mt-2 mb-1 text-white leading-tight"
-              {...props}
-            />
-          ),
+    // ✅ MEMOIZACIÓN AGRESIVA: Solo procesar si el contenido cambió significativamente
+    const processedContent = useMemo(() => {
+      return extractSpecialBlocks(content);
+    }, [content]); // Solo re-procesar si content cambia
 
-          // Separadores elegantes
-          hr: () => <hr className="separator-premium" />,
+    const { mainContent, extractedBlocks } = processedContent;
 
-          // Listas con mejor espaciado y jerarquía
-          ul: ({ node, ...props }) => (
-            <ul className="space-y-3 my-6 list-disc list-inside" {...props} />
-          ),
-          ol: ({ node, ...props }) => (
-            <ol
-              className="space-y-3 my-6 list-decimal list-inside"
-              {...props}
-            />
-          ),
-          li: ({ node, ...props }) => (
-            <li className="leading-relaxed mb-2 text-gray-100" {...props} />
-          ),
+    // ✅ CALLBACK MEMOIZADO: Evitar re-crear la función en cada render
+    const handleExtractedBlocks = useCallback(() => {
+      if (onExtractedBlocks) {
+        onExtractedBlocks(extractedBlocks);
+      }
+    }, [onExtractedBlocks, extractedBlocks]);
 
-          // Código inline mejorado
-          code: ({ node, className, children, ...props }: any) => {
-            const isInline = !className?.includes("language-");
+    // Llamar a la función de callback si está presente (solo cuando no está streaming)
+    React.useEffect(() => {
+      if (!isStreaming && extractedBlocks.length > 0) {
+        handleExtractedBlocks();
+      }
+    }, [handleExtractedBlocks, isStreaming, extractedBlocks.length]);
 
-            if (isInline) {
-              return (
-                <code
-                  className="bg-gray-800 text-green-400 px-2 py-1 rounded text-sm font-mono"
-                  {...props}
-                >
-                  {children}
-                </code>
-              );
-            }
-            return null; // Los bloques de código se manejan por separado
-          },
+    // ✅ FUNCIÓN MEMOIZADA: Evitar re-crear extractCleanText en cada render
+    const extractCleanText = useCallback((children: any): string => {
+      if (typeof children === "string") {
+        return children;
+      }
+      if (Array.isArray(children)) {
+        return children.map((child) => extractCleanText(child)).join("");
+      }
+      if (children && typeof children === "object" && children.props) {
+        return extractCleanText(children.props.children);
+      }
+      return String(children);
+    }, []);
 
-          // Enlaces con iconos y mejor estilo
-          a: ({ node, href, children, ...props }) => {
-            // Solo renderizar como enlace si tiene href válido
-            if (!href || href === "#" || href.startsWith("javascript:")) {
-              return <span className="text-gray-300">{children}</span>;
-            }
+    // ✅ MEMOIZAR COMPONENTES: Evitar re-crear componentes en cada render
+    const markdownComponents = useMemo(
+      () => ({
+        // Títulos con jerarquía visual premium
+        h1: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <h1
+            className="text-3xl font-bold mt-8 mb-6 text-white border-b border-gray-700 pb-3 leading-tight"
+            {...props}
+          />
+        ),
+        h2: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <h2
+            className="text-2xl font-semibold mt-6 mb-4 text-white leading-tight"
+            {...props}
+          />
+        ),
+        h3: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <h3
+            className="text-xl font-medium mt-5 mb-3 text-white leading-tight"
+            {...props}
+          />
+        ),
+        h4: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <h4
+            className="text-lg font-medium mt-4 mb-2 text-white leading-tight"
+            {...props}
+          />
+        ),
+        h5: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <h5
+            className="text-base font-medium mt-3 mb-2 text-white leading-tight"
+            {...props}
+          />
+        ),
+        h6: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <h6
+            className="text-sm font-medium mt-2 mb-1 text-white leading-tight"
+            {...props}
+          />
+        ),
 
+        // Separadores elegantes
+        hr: () => <hr className="separator-premium" />,
+
+        // Listas con mejor espaciado y jerarquía
+        ul: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <ul className="space-y-3 my-6 list-disc list-inside" {...props} />
+        ),
+        ol: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <ol className="space-y-3 my-6 list-decimal list-inside" {...props} />
+        ),
+        li: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <li className="leading-relaxed mb-2 text-gray-100" {...props} />
+        ),
+
+        // Código inline mejorado
+        code: ({ node, className, children, ...props }: any) => {
+          const isInline = !className?.includes("language-");
+
+          if (isInline) {
             return (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 underline inline-flex items-center gap-1 transition-colors"
+              <code
+                className="bg-gray-800 text-green-400 px-2 py-1 rounded text-sm font-mono"
                 {...props}
               >
                 {children}
-                <ExternalLink size={12} />
-              </a>
+              </code>
             );
-          },
+          }
+          return null; // Los bloques de código se manejan por separado
+        },
 
-          // Tablas premium con mejor diseño
-          table: ({ node, ...props }) => (
-            <div className="my-6 overflow-x-auto">
-              <div className="inline-block min-w-full align-middle">
-                <div className="overflow-hidden border border-gray-700 rounded-lg shadow-lg">
-                  <table
-                    className="min-w-full divide-y divide-gray-700"
-                    {...props}
-                  />
-                </div>
+        // Enlaces con iconos y mejor estilo
+        a: ({
+          node,
+          href,
+          children,
+          ...props
+        }: {
+          node?: any;
+          href?: string;
+          children?: any;
+          [key: string]: any;
+        }) => {
+          // Solo renderizar como enlace si tiene href válido
+          if (!href || href === "#" || href.startsWith("javascript:")) {
+            return <span className="text-gray-300">{children}</span>;
+          }
+
+          return (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 underline inline-flex items-center gap-1 transition-colors"
+              {...props}
+            >
+              {children}
+              <ExternalLink size={12} />
+            </a>
+          );
+        },
+
+        // Tablas premium con mejor diseño
+        table: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <div className="my-6 overflow-x-auto">
+            <div className="inline-block min-w-full align-middle">
+              <div className="overflow-hidden border border-gray-700 rounded-lg shadow-lg">
+                <table
+                  className="min-w-full divide-y divide-gray-700"
+                  {...props}
+                />
               </div>
             </div>
-          ),
-          thead: ({ node, ...props }) => (
-            <thead className="bg-gray-800" {...props} />
-          ),
-          tbody: ({ node, ...props }) => (
-            <tbody className="divide-y divide-gray-700" {...props} />
-          ),
-          tr: ({ node, ...props }) => (
-            <tr className="hover:bg-gray-800/50 transition-colors" {...props} />
-          ),
-          th: ({ node, ...props }) => (
-            <th
-              className="px-6 py-4 text-left text-sm font-semibold text-gray-300 uppercase tracking-wider"
-              {...props}
-            />
-          ),
-          td: ({ node, ...props }) => (
-            <td
-              className="px-6 py-4 whitespace-nowrap text-sm text-gray-300"
-              {...props}
-            />
-          ),
+          </div>
+        ),
+        thead: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <thead className="bg-gray-800" {...props} />
+        ),
+        tbody: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <tbody className="divide-y divide-gray-700" {...props} />
+        ),
+        tr: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <tr className="hover:bg-gray-800/50 transition-colors" {...props} />
+        ),
+        th: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <th
+            className="px-6 py-4 text-left text-sm font-semibold text-gray-300 uppercase tracking-wider"
+            {...props}
+          />
+        ),
+        td: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+          <td
+            className="px-6 py-4 whitespace-nowrap text-sm text-gray-300"
+            {...props}
+          />
+        ),
 
-          // Citas elegantes con mejor diseño
-          blockquote: ({ node, ...props }) => (
-            <blockquote
-              className="border-l-4 border-blue-500 pl-6 py-4 my-6 bg-blue-500/10 rounded-r-lg"
-              {...props}
-            />
-          ),
+        // Citas elegantes con mejor diseño
+        blockquote: ({
+          node,
+          ...props
+        }: {
+          node?: any;
+          [key: string]: any;
+        }) => (
+          <blockquote
+            className="border-l-4 border-blue-500 pl-6 py-4 my-6 bg-blue-500/10 rounded-r-lg"
+            {...props}
+          />
+        ),
 
-          // Párrafos con mejor espaciado
-          p: ({ node, ...props }) => {
-            const cleanText = extractCleanText(props.children);
+        // Párrafos con mejor espaciado
+        p: ({ node, ...props }: { node?: any; [key: string]: any }) => {
+          const cleanText = extractCleanText(props.children);
 
-            // Detectar archivos generados
-            if (cleanText.includes("[type:") && cleanText.includes("]")) {
-              const match = cleanText.match(/\[type:(.+?)\]/);
-              if (match) {
-                const fileType = match[1];
-                return (
-                  <FileDownloadBlock
-                    filename={`archivo.${fileType}`}
-                    type={fileType.toUpperCase()}
-                  />
-                );
-              }
+          // Detectar archivos generados
+          if (cleanText.includes("[type:") && cleanText.includes("]")) {
+            const match = cleanText.match(/\[type:(.+?)\]/);
+            if (match) {
+              const fileType = match[1];
+              return (
+                <FileDownloadBlock
+                  filename={`archivo.${fileType}`}
+                  type={fileType.toUpperCase()}
+                />
+              );
             }
+          }
 
-            // Renderizar párrafo normal con estilo que evite enlaces no deseados
-            return (
-              <p className="my-4 leading-relaxed text-gray-100" {...props} />
-            );
-          },
+          // Renderizar párrafo normal con estilo que evite enlaces no deseados
+          return (
+            <p className="my-4 leading-relaxed text-gray-100" {...props} />
+          );
+        },
 
-          // Bloques de código premium
-          pre: ({ node, children, ...props }) => {
-            const codeElement = React.Children.toArray(children).find(
-              (child) => React.isValidElement(child) && child.type === "code"
-            ) as React.ReactElement<any>;
+        // Bloques de código premium
+        pre: ({
+          node,
+          children,
+          ...props
+        }: {
+          node?: any;
+          children?: any;
+          [key: string]: any;
+        }) => {
+          const codeElement = React.Children.toArray(children).find(
+            (child) => React.isValidElement(child) && child.type === "code"
+          ) as React.ReactElement<any>;
 
-            if (codeElement) {
-              const language =
-                (codeElement.props as any)?.className?.replace(
-                  "language-",
-                  ""
-                ) || "text";
-              const code = (codeElement.props as any)?.children || "";
+          if (codeElement) {
+            const language =
+              (codeElement.props as any)?.className?.replace("language-", "") ||
+              "text";
+            const code = (codeElement.props as any)?.children || "";
 
-              return <CodeBlock code={code} language={language} />;
-            }
+            return <CodeBlock code={code} language={language} />;
+          }
 
-            return (
-              <pre
-                className="p-6 bg-gray-900 rounded-xl overflow-x-auto shadow-lg"
-                {...props}
-              />
-            );
-          },
-        }}
-      >
-        {mainContent}
-      </ReactMarkdown>
-    </div>
-  );
-};
+          return (
+            <pre
+              className="p-6 bg-gray-900 rounded-xl overflow-x-auto shadow-lg"
+              {...props}
+            />
+          );
+        },
+      }),
+      [extractCleanText]
+    ); // ✅ Memoizar con dependencias
+
+    return (
+      <div className={`prose-premium max-w-none space-y-6 ${className}`}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeHighlight, rehypeRaw]}
+          components={markdownComponents}
+        >
+          {mainContent}
+        </ReactMarkdown>
+      </div>
+    );
+  }
+);
