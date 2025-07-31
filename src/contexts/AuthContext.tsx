@@ -30,6 +30,7 @@ interface AuthContextType {
   signInAnonymously: () => Promise<void>;
   firebaseAvailable: boolean;
   recaptchaVerifier: RecaptchaVerifier | null;
+  isAnonymous: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseAvailable, setFirebaseAvailable] = useState(false);
   const [recaptchaVerifier, setRecaptchaVerifier] =
     useState<RecaptchaVerifier | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   useEffect(() => {
     // Verificar si Firebase auth está disponible
@@ -59,16 +61,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         auth,
         async (user) => {
           if (!user) {
-            // Si no hay usuario, intentar autenticación anónima
-            try {
-              console.log("🔄 Iniciando autenticación anónima...");
-              await signInAnonymously(auth);
-            } catch (error) {
-              console.error("❌ Error en autenticación anónima:", error);
-            }
+            // No hay usuario autenticado - no hacer autenticación anónima automática
+            console.log("🔓 No hay usuario autenticado");
+            setUser(null);
+            setIsAnonymous(false);
+            setLoading(false);
           } else {
-            console.log("✅ Usuario autenticado:", user.uid);
+            console.log(
+              "✅ Usuario autenticado:",
+              user.uid,
+              user.isAnonymous ? "(anónimo)" : ""
+            );
             setUser(user);
+            setIsAnonymous(user.isAnonymous);
             setLoading(false);
           }
         },
@@ -124,6 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       await signOut(auth);
+      setIsAnonymous(false);
+      console.log("🔓 Sesión cerrada exitosamente");
     } catch (error: any) {
       throw new Error(error.message);
     }
@@ -213,7 +220,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      await signInAnonymously(auth);
+      const result = await signInAnonymously(auth);
+      setIsAnonymous(true);
+      console.log("✅ Autenticación anónima exitosa:", result.user.uid);
     } catch (error: any) {
       throw new Error(error.message);
     }
@@ -232,6 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInAnonymously,
     firebaseAvailable,
     recaptchaVerifier,
+    isAnonymous,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

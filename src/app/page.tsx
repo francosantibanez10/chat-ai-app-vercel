@@ -27,7 +27,7 @@ export default function HomePage() {
     interval: "month" | "year";
   } | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isAnonymous } = useAuth();
   const router = useRouter();
 
   // Manejar scroll a la sección de precios y mostrar modal
@@ -125,7 +125,7 @@ export default function HomePage() {
               {user ? (
                 <>
                   <span className="hidden sm:block text-gray-300 text-sm">
-                    {user.email}
+                    {isAnonymous ? "Usuario Anónimo" : user.email}
                   </span>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -135,6 +135,16 @@ export default function HomePage() {
                   >
                     Chat
                   </motion.button>
+                  {isAnonymous && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => router.push("/login")}
+                      className="text-blue-400 hover:text-blue-300 transition-colors text-sm sm:text-base"
+                    >
+                      Crear cuenta
+                    </motion.button>
+                  )}
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
