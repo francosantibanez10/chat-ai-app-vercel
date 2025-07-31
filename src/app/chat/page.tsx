@@ -10,6 +10,7 @@ import CheckoutModal from "@/components/CheckoutModal";
 import { useConversations } from "@/contexts/ConversationsContext";
 import { ConversationSummary } from "@/lib/firebase/conversations";
 import { AnonymousTrialBanner } from "@/components/AnonymousTrialBanner";
+import { ErrorDashboardButton } from "@/components/ErrorDashboardButton";
 
 export default function ChatPage() {
   const { currentConversation } = useConversations();
@@ -146,6 +147,10 @@ export default function ChatPage() {
             interval={checkoutModal.interval}
           />
         )}
+        />
+
+        {/* Botón del Dashboard de Errores */}
+        <ErrorDashboardButton />
       </div>
     </ProtectedRoute>
   );
