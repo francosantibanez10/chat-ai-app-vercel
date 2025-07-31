@@ -35,6 +35,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useDebounce } from "@/hooks/useDebounce";
 import clsx from "clsx";
 import ArchivedConversations from "./ArchivedConversations";
+import { AlertDialog } from "./ui/AlertDialog";
 
 interface SidebarProps {
   selectedChatId?: string;
@@ -84,6 +85,10 @@ export default function Sidebar({
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<
+    string | null
+  >(null);
 
   // Debounce para búsqueda
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -140,10 +145,17 @@ export default function Sidebar({
   };
 
   const handleDeleteConversation = async (chatId: string) => {
-    try {
-      await deleteConversationById(chatId);
-    } catch (error) {
-      console.error("Error deleting conversation:", error);
+    setConversationToDelete(chatId);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteConversation = async () => {
+    if (conversationToDelete) {
+      try {
+        await deleteConversationById(conversationToDelete);
+      } catch (error) {
+        console.error("Error deleting conversation:", error);
+      }
     }
   };
 
@@ -582,6 +594,18 @@ export default function Sidebar({
           onClose={() => setIsArchivedOpen(false)}
         />
       </div>
+
+      {/* Alert Dialog para eliminar conversación */}
+      <AlertDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={confirmDeleteConversation}
+        title="Eliminar conversación"
+        message="¿Estás seguro de que quieres eliminar esta conversación? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </>
   );
 }
