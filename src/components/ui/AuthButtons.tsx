@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { PhoneAuthModal } from "./PhoneAuthModal";
 
 interface AuthButtonsProps {
   onGoogleClick?: () => void;
@@ -22,6 +23,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   showPhone = false,
 }) => {
   const { signInWithGoogle, signInWithGitHub, signInWithPhone } = useAuth();
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
 
   const handleGoogleSignIn = async () => {
     if (onGoogleClick) {
@@ -50,7 +52,14 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   const handlePhoneSignIn = () => {
     if (onPhoneClick) {
       onPhoneClick();
+    } else {
+      setShowPhoneModal(true);
     }
+  };
+
+  const handlePhoneSuccess = () => {
+    // El usuario se autenticó exitosamente
+    console.log("Phone authentication successful");
   };
 
   const buttonClasses =
@@ -122,5 +131,12 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
         </motion.button>
       )}
     </div>
+
+    {/* Phone Auth Modal */}
+    <PhoneAuthModal
+      isOpen={showPhoneModal}
+      onClose={() => setShowPhoneModal(false)}
+      onSuccess={handlePhoneSuccess}
+    />
   );
 };

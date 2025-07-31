@@ -195,6 +195,7 @@ export default function LoginPage() {
                 <AuthButtons
                   loading={loading}
                   onGoogleClick={handleGoogleSignIn}
+                  showPhone={true}
                 />
               </form>
 
@@ -328,6 +329,7 @@ export default function LoginPage() {
                 <AuthButtons
                   loading={loading}
                   onGoogleClick={handleGoogleSignIn}
+                  showPhone={true}
                 />
               </form>
 
