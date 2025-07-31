@@ -94,6 +94,7 @@ export default function Sidebar({
 
   // Filtrar conversaciones con debounce
   const filteredConversations = useMemo(() => {
+    console.log("🔧 [DEBUG] Sidebar: Conversaciones disponibles:", conversations.length);
     if (!debouncedSearchTerm.trim()) return conversations;
 
     return conversations.filter((chat) =>
