@@ -77,7 +77,7 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[91] w-full max-w-md mx-4"
+            className="fixed inset-4 flex items-center justify-center z-[91] md:inset-auto md:top-1/2 md:left-1/2 md:transform md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md"
           >
             <div className="bg-gray-900 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
               {/* Header */}
