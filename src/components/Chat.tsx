@@ -126,20 +126,8 @@ const Chat = React.memo(function Chat({
 
   // ✅ Cargar conversación cuando cambie el conversationId
   useEffect(() => {
-    console.log("🔧 [DEBUG] Chat: useEffect triggered", {
-      conversationId,
-      userId: user?.uid,
-    });
-
     if (conversationId && user?.uid) {
-      console.log("🔧 [DEBUG] Chat: Cargando conversación", conversationId);
       loadConversation(conversationId);
-    } else if (!conversationId && user?.uid) {
-      // Si no hay conversationId, limpiar la conversación actual
-      console.log(
-        "🔧 [DEBUG] Chat: No hay conversationId, limpiando conversación"
-      );
-      // No hacer nada, dejar que se mantenga la conversación actual o crear una nueva
     }
   }, [conversationId, user?.uid, loadConversation]);
 

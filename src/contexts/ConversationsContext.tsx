@@ -91,15 +91,7 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
   const refreshConversations = useCallback(async () => {
     if (!user?.uid) return;
     try {
-      console.log(
-        "🔧 [DEBUG] Context: Refrescando conversaciones para usuario:",
-        user.uid
-      );
       const userConversations = await getUserConversations(user.uid, false);
-      console.log(
-        "🔧 [DEBUG] Context: Conversaciones refrescadas:",
-        userConversations.length
-      );
       setConversations(userConversations);
     } catch (err) {
       console.error("Error refreshing conversations:", err);
@@ -136,15 +128,7 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
   const updateConversationsList = useCallback(async () => {
     if (!user?.uid) return;
     try {
-      console.log(
-        "🔧 [DEBUG] Context: Actualizando lista de conversaciones para usuario:",
-        user.uid
-      );
       const userConversations = await getUserConversations(user.uid);
-      console.log(
-        "🔧 [DEBUG] Context: Conversaciones obtenidas:",
-        userConversations.length
-      );
       setConversations(userConversations);
     } catch (err) {
       console.error("Error updating conversations list:", err);
