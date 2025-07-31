@@ -244,14 +244,14 @@ export default function HomePage() {
                 <motion.button
                   whileHover={{
                     scale: 1.05,
-                    boxShadow: "0 20px 40px rgba(59, 130, 246, 0.3)",
+                    boxShadow: "0 20px 40px rgba(75, 85, 99, 0.3)",
                   }}
                   whileTap={{ scale: 0.95 }}
                   animate={{
                     boxShadow: [
-                      "0 10px 30px rgba(59, 130, 246, 0.2)",
-                      "0 15px 35px rgba(59, 130, 246, 0.4)",
-                      "0 10px 30px rgba(59, 130, 246, 0.2)",
+                      "0 10px 30px rgba(75, 85, 99, 0.2)",
+                      "0 15px 35px rgba(75, 85, 99, 0.4)",
+                      "0 10px 30px rgba(75, 85, 99, 0.2)",
                     ],
                   }}
                   transition={{
@@ -262,19 +262,18 @@ export default function HomePage() {
                     },
                   }}
                   onClick={handleTryForFree}
-                  className="relative bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 hover:from-purple-500 hover:via-blue-500 hover:to-cyan-500 text-white px-10 py-5 rounded-xl font-semibold text-xl transition-all duration-300 shadow-2xl border border-purple-500/50 overflow-hidden group order-1 sm:order-1"
+                  className="relative bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700 hover:from-gray-600 hover:via-gray-500 hover:to-gray-600 text-white px-10 py-5 rounded-xl font-semibold text-xl transition-all duration-300 shadow-2xl border border-gray-600 overflow-hidden group order-1 sm:order-1"
                 >
                   {/* Efecto de brillo animado */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
 
                   {/* Contenido del botón */}
                   <span className="relative flex items-center justify-center space-x-2">
-                    <span>🚀</span>
                     <span>Probar gratis ahora</span>
                     <motion.span
-                      animate={{ x: [0, 5, 0] }}
+                      animate={{ x: [0, 3, 0] }}
                       transition={{
-                        duration: 1.5,
+                        duration: 2,
                         repeat: Infinity,
                         ease: "easeInOut",
                       }}
@@ -282,9 +281,9 @@ export default function HomePage() {
                       →
                     </motion.span>
                   </span>
-                  
+
                   {/* Badge de prueba gratuita */}
-                  <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                  <div className="absolute -top-2 -right-2 bg-gray-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                     PRUEBA
                   </div>
                 </motion.button>
