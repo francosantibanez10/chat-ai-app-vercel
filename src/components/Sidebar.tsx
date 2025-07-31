@@ -222,7 +222,7 @@ export default function Sidebar({
         }}
         onClick={(e) => e.stopPropagation()}
         className={clsx(
-          "sidebar-container h-screen flex flex-col bg-gray-950 border-r border-gray-800 overflow-x-visible",
+          "sidebar-container h-full md:h-screen flex flex-col bg-gray-950 border-r border-gray-800 overflow-x-visible",
           "fixed md:absolute md:left-0 md:top-0 z-[70] left-0"
         )}
       >
