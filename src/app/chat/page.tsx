@@ -9,6 +9,7 @@ import PricingPlans from "@/components/PricingPlans";
 import CheckoutModal from "@/components/CheckoutModal";
 import { useConversations } from "@/contexts/ConversationsContext";
 import { ConversationSummary } from "@/lib/firebase/conversations";
+import { AnonymousTrialBanner } from "@/components/AnonymousTrialBanner";
 
 export default function ChatPage() {
   const { currentConversation } = useConversations();
@@ -86,6 +87,7 @@ export default function ChatPage() {
 
   return (
     <ProtectedRoute>
+      <AnonymousTrialBanner />
       <div className="flex h-screen bg-gray-900">
         {/* Sidebar - Overlay en mobile, colapsable en desktop */}
         <div className={`${sidebarOpen || !isMobile ? "block" : "hidden"}`}>

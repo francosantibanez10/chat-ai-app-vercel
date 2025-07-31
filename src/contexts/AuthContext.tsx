@@ -15,7 +15,7 @@ import {
   signInAnonymously,
   RecaptchaVerifier,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase"; // TODO(hud): Audit if 'auth' is properly initialized and typed for both dev/prod environments
 
 interface AuthContextType {
   user: User | null;

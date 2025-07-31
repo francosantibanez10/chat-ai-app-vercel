@@ -27,7 +27,7 @@ export default function HomePage() {
     interval: "month" | "year";
   } | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const { user, logout, isAnonymous } = useAuth();
+  const { user, logout, isAnonymous, signInAnonymously } = useAuth();
   const router = useRouter();
 
   // Manejar scroll a la sección de precios y mostrar modal
@@ -86,6 +86,15 @@ export default function HomePage() {
       router.push("/");
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
+    }
+  };
+
+  const handleTryForFree = async () => {
+    try {
+      await signInAnonymously();
+      router.push("/chat");
+    } catch (error) {
+      console.error("Error al iniciar prueba gratuita:", error);
     }
   };
 
@@ -238,6 +247,15 @@ export default function HomePage() {
                   className="bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 text-white px-10 py-5 rounded-xl font-semibold text-xl transition-all duration-300 shadow-2xl hover:shadow-gray-500/25 border border-gray-700"
                 >
                   Empieza gratis hoy — Sin tarjeta
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleTryForFree}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-10 py-5 rounded-xl font-semibold text-xl transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 border border-blue-600"
+                >
+                  Probar gratis ahora
                 </motion.button>
 
                 <motion.button

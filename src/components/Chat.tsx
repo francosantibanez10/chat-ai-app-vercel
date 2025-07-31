@@ -35,6 +35,15 @@ import {
 import { toast } from "react-hot-toast";
 import { submitFeedback } from "@/lib/feedback";
 import { submitReport } from "@/lib/reports";
+import {
+  canSendMessage,
+  canCreateConversation,
+  incrementMessageCount,
+  incrementConversationCount,
+  getRemainingMessages,
+  getRemainingConversations,
+} from "@/lib/anonymousLimits";
+import { AnonymousLimitModal } from "./AnonymousLimitModal";
 
 // Extender el tipo Message para incluir metadata
 interface ExtendedMessage {
@@ -75,6 +84,15 @@ const Chat = React.memo(function Chat({
     feature: string;
   } | null>(null);
 
+  // Estado para el modal de límites anónimos
+  const [anonymousLimitModal, setAnonymousLimitModal] = useState<{
+    isOpen: boolean;
+    limitType: "messages" | "conversations" | "time";
+  }>({
+    isOpen: false,
+    limitType: "messages",
+  });
+
   // Estado para controlar cuándo mostrar el botón "Ir a último mensaje"
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
@@ -98,6 +116,7 @@ const Chat = React.memo(function Chat({
   const { currentPlan, updatePlan } = usePlan();
   const { saveImage } = useImageLibrary();
   const router = useRouter();
+  const { isAnonymous } = useAuth();
   const { user } = useAuth();
 
   // ✅ Optimización: Trackear cambios de usuario para evitar re-renderizados
@@ -441,6 +460,15 @@ const Chat = React.memo(function Chat({
   };
 
   const handleNewChat = async () => {
+    // Verificar límites para usuarios anónimos
+    if (isAnonymous && !canCreateConversation()) {
+      setAnonymousLimitModal({
+        isOpen: true,
+        limitType: "conversations",
+      });
+      return;
+    }
+
     // Crear nueva conversación y redirigir
     try {
       // Verificar que el usuario esté autenticado antes de crear
@@ -450,6 +478,11 @@ const Chat = React.memo(function Chat({
       }
 
       const newChatId = await createNewConversation();
+
+      // Incrementar contador para usuarios anónimos
+      if (isAnonymous) {
+        incrementConversationCount();
+      }
 
       // Redirigir a la nueva conversación
       router.push(`/chat/${newChatId}`);
@@ -467,6 +500,15 @@ const Chat = React.memo(function Chat({
       hasConversation: !!currentConversation?.id,
       conversationId: currentConversation?.id,
     });
+
+    // Verificar límites para usuarios anónimos
+    if (isAnonymous && !canSendMessage()) {
+      setAnonymousLimitModal({
+        isOpen: true,
+        limitType: "messages",
+      });
+      return;
+    }
 
     // Verificar que hay input
     if (!input.trim()) {
@@ -541,6 +583,11 @@ const Chat = React.memo(function Chat({
         content: input,
       });
       console.log("🔧 [DEBUG] Chat: Mensaje guardado en Firebase exitosamente");
+
+      // Incrementar contador para usuarios anónimos
+      if (isAnonymous) {
+        incrementMessageCount();
+      }
     } catch (error) {
       console.error("Error saving message:", error);
     }
@@ -575,6 +622,11 @@ const Chat = React.memo(function Chat({
         role: "user",
         content: input,
       });
+
+      // Incrementar contador para usuarios anónimos
+      if (isAnonymous) {
+        incrementMessageCount();
+      }
     } catch (error) {
       console.error("Error saving user message to Firebase:", error);
     }
@@ -1082,6 +1134,13 @@ const Chat = React.memo(function Chat({
           onUpgrade={handleUpgradePlan}
         />
       )}
+
+      {/* Modal de límites anónimos */}
+      <AnonymousLimitModal
+        isOpen={anonymousLimitModal.isOpen}
+        onClose={() => setAnonymousLimitModal({ isOpen: false, limitType: "messages" })}
+        limitType={anonymousLimitModal.limitType}
+      />
     </div>
   );
 });
