@@ -140,12 +140,10 @@ export default function Sidebar({
   };
 
   const handleDeleteConversation = async (chatId: string) => {
-    if (confirm("¿Estás seguro de que quieres eliminar esta conversación?")) {
-      try {
-        await deleteConversationById(chatId);
-      } catch (error) {
-        console.error("Error deleting conversation:", error);
-      }
+    try {
+      await deleteConversationById(chatId);
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
     }
   };
 

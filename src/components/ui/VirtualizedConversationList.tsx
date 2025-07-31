@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Menu, Transition } from "@headlessui/react";
 import clsx from "clsx";
+import { AlertDialog } from "./AlertDialog";
 
 interface Conversation {
   id: string;
@@ -54,6 +55,7 @@ const ConversationItem: React.FC<{
 }) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [newTitle, setNewTitle] = useState(conversation.title);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
@@ -278,13 +280,7 @@ const ConversationItem: React.FC<{
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (
-                                confirm(
-                                  "¿Estás seguro de que quieres eliminar esta conversación? Esta acción no se puede deshacer."
-                                )
-                              ) {
-                                onDelete(conversation.id);
-                              }
+                              setShowDeleteDialog(true);
                             }}
                             className={clsx(
                               "w-full flex items-center space-x-3 px-3 py-2 text-sm transition-colors",
@@ -306,6 +302,18 @@ const ConversationItem: React.FC<{
           </div>
         </div>
       </div>
+
+      {/* Alert Dialog para eliminar conversación */}
+      <AlertDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={() => onDelete?.(conversation.id)}
+        title="Eliminar conversación"
+        message="¿Estás seguro de que quieres eliminar esta conversación? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </motion.div>
   );
 };
