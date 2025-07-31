@@ -262,7 +262,7 @@ export default function HomePage() {
                     },
                   }}
                   onClick={handleTryForFree}
-                  className="relative bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 hover:from-blue-800 hover:via-blue-700 hover:to-blue-800 text-white px-10 py-5 rounded-xl font-semibold text-xl transition-all duration-300 shadow-2xl border border-blue-700 overflow-hidden group order-1 sm:order-1"
+                  className="relative bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 hover:from-blue-800 hover:via-blue-700 hover:to-blue-800 text-white px-10 py-5 rounded-xl font-semibold text-xl transition-all duration-300 shadow-2xl border border-blue-700 overflow-visible group order-1 sm:order-1"
                 >
                   {/* Efecto de brillo animado */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
@@ -283,7 +283,7 @@ export default function HomePage() {
                   </span>
 
                   {/* Badge de prueba gratuita */}
-                  <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  <div className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
                     PRUEBA
                   </div>
                 </motion.button>
