@@ -94,10 +94,6 @@ export default function Sidebar({
 
   // Filtrar conversaciones con debounce
   const filteredConversations = useMemo(() => {
-    console.log(
-      "🔧 [DEBUG] Sidebar: Conversaciones disponibles:",
-      conversations.length
-    );
     if (!debouncedSearchTerm.trim()) return conversations;
 
     return conversations.filter((chat) =>
@@ -125,21 +121,11 @@ export default function Sidebar({
   };
 
   const handleSelectChat = async (chatId: string) => {
-    console.log(
-      "🔧 [DEBUG] Sidebar: handleSelectChat llamado con chatId:",
-      chatId
-    );
     try {
-      console.log("🔧 [DEBUG] Sidebar: Cargando conversación...");
       await loadConversation(chatId);
-      console.log(
-        "🔧 [DEBUG] Sidebar: Conversación cargada, navegando a:",
-        `/chat/${chatId}`
-      );
       router.push(`/chat/${chatId}`);
       onChatSelect?.(chatId);
       setSelectedIndex(-1); // Reset selection
-      console.log("🔧 [DEBUG] Sidebar: Navegación completada");
     } catch (error) {
       console.error("Error loading chat:", error);
     }
@@ -420,22 +406,15 @@ export default function Sidebar({
               </div>
             ) : (
               <VirtualizedConversationList
-                conversations={filteredConversations.map((chat, index) => {
-                  console.log(
-                    "🔧 [DEBUG] Sidebar: Mapeando conversación:",
-                    chat.id,
-                    chat.title
-                  );
-                  return {
-                    id: chat.id,
-                    title: chat.title,
-                    lastMessage: `${chat.messageCount} mensajes`, // Placeholder
-                    timestamp: chat.updatedAt,
-                    isPinned: chat.isPinned || false,
-                    isSelected:
-                      selectedChatId === chat.id || selectedIndex === index,
-                  };
-                })}
+                conversations={filteredConversations.map((chat, index) => ({
+                  id: chat.id,
+                  title: chat.title,
+                  lastMessage: `${chat.messageCount} mensajes`, // Placeholder
+                  timestamp: chat.updatedAt,
+                  isPinned: chat.isPinned || false,
+                  isSelected:
+                    selectedChatId === chat.id || selectedIndex === index,
+                }))}
                 onSelectConversation={handleSelectChat}
                 onPinConversation={handlePinConversation}
                 onDeleteConversation={handleDeleteConversation}

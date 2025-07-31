@@ -104,10 +104,7 @@ const ConversationItem: React.FC<{
           "bg-gray-800/20": conversation.isPinned && !conversation.isSelected,
         }
       )}
-      onClick={() => {
-        console.log("🔧 [DEBUG] VirtualizedConversationList: Click en conversación:", conversation.id);
-        onSelect(conversation.id);
-      }}
+      onClick={() => onSelect(conversation.id)}
     >
       {/* Icono de conversación */}
       <div className="flex-shrink-0">
