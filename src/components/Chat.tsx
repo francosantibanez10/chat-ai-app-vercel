@@ -35,6 +35,14 @@ import {
 import { toast } from "react-hot-toast";
 import { submitFeedback } from "@/lib/feedback";
 import { submitReport } from "@/lib/reports";
+import { retryAI, retryFirebase } from "@/lib/retryManager";
+import {
+  executeWithAIFallback,
+  executeWithFirebaseFallback,
+} from "@/lib/fallbackManager";
+import { createError } from "@/lib/errorHandler";
+import { ErrorNotification } from "./ErrorNotification";
+import { ErrorDashboard } from "./ErrorDashboard";
 import {
   canSendMessage,
   canCreateConversation,
@@ -98,6 +106,13 @@ const Chat = React.memo(function Chat({
 
   // Configuración para streaming optimizado
   const [streamingOptimized, setStreamingOptimized] = useState(false);
+
+  // Estado para manejo de errores
+  const [error, setError] = useState<Error | string | null>(null);
+  const [errorType, setErrorType] = useState<
+    "error" | "warning" | "info" | "network" | "auth" | "permission"
+  >("error");
+  const [showErrorDashboard, setShowErrorDashboard] = useState(false);
 
   // Referencia para el contenedor de mensajes
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -491,7 +506,7 @@ const Chat = React.memo(function Chat({
     }
   };
 
-  // Guardar mensaje del usuario en Firebase
+  // Guardar mensaje del usuario en Firebase con retry y fallbacks
   const handleSubmitWithFirebase = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -516,90 +531,169 @@ const Chat = React.memo(function Chat({
       return;
     }
 
+    // Limpiar errores previos
+    setError(null);
+
     // Si no hay conversación activa, crear una nueva
     if (!currentConversation?.id) {
       console.log("🔧 [DEBUG] Chat: Creando nueva conversación");
-      try {
-        const newChatId = await createNewConversation();
-        console.log(
-          "🔧 [DEBUG] Chat: Nueva conversación creada con ID:",
-          newChatId
+
+      const result = await executeWithFirebaseFallback(
+        async () => {
+          const newChatId = await createNewConversation();
+          console.log(
+            "🔧 [DEBUG] Chat: Nueva conversación creada con ID:",
+            newChatId
+          );
+
+          // Guardar el mensaje en la nueva conversación con retry
+          await retryFirebase(
+            async () =>
+              addMessage(newChatId, {
+                role: "user",
+                content: input,
+              }),
+            "Save User Message"
+          );
+
+          return newChatId;
+        },
+        undefined, // No fallback para crear conversación
+        `conversation_${user?.uid}_${Date.now()}`,
+        "Create New Conversation"
+      );
+
+      if (!result.success) {
+        const errorMsg = result.error?.message || "Error al crear conversación";
+        setError(errorMsg);
+        setErrorType("error");
+        createError(
+          result.error || new Error(errorMsg),
+          { userId: user?.uid || "", endpoint: "createConversation" },
+          "high",
+          "system_error"
         );
-
-        // Guardar el mensaje en la nueva conversación
-        await addMessage(newChatId, {
-          role: "user",
-          content: input,
-        });
-
-        // Enviar mensaje a la IA usando la nueva conversación
-        console.log(
-          "🔧 [DEBUG] Chat: Enviando mensaje a la IA con nueva conversación"
-        );
-        const currentInput = input;
-        setInput(""); // Limpiar input manualmente
-
-        // Llamar directamente a la API de chat con la nueva conversación
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: [{ role: "user", content: currentInput }],
-            conversationId: newChatId,
-            userId: user?.uid,
-            model: selectedModel,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Error al enviar mensaje a la IA");
-        }
-
-        const data = await response.json();
-        console.log("🔧 [DEBUG] Chat: Respuesta de la IA recibida:", data);
-
-        // Guardar la respuesta de la IA en Firebase
-        if (data.content) {
-          await addMessage(newChatId, {
-            role: "assistant",
-            content: data.content,
-          });
-        }
-
-        // Redirigir a la nueva conversación
-        router.push(`/chat/${newChatId}`);
-        return;
-      } catch (error) {
-        console.error("Error creating new conversation:", error);
         return;
       }
+
+      const newChatId = result.data;
+
+      // Enviar mensaje a la IA usando la nueva conversación con retry
+      console.log(
+        "🔧 [DEBUG] Chat: Enviando mensaje a la IA con nueva conversación"
+      );
+      const currentInput = input;
+      setInput(""); // Limpiar input manualmente
+
+      const aiResult = await executeWithAIFallback(
+        async () => {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: [{ role: "user", content: currentInput }],
+              conversationId: newChatId,
+              userId: user?.uid,
+              model: selectedModel,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(
+              `Error al enviar mensaje a la IA: ${response.status}`
+            );
+          }
+
+          return await response.json();
+        },
+        undefined, // No fallback para AI
+        `ai_response_${newChatId}_${Date.now()}`,
+        "AI Chat Response"
+      );
+
+      if (!aiResult.success) {
+        const errorMsg =
+          aiResult.error?.message || "Error al obtener respuesta de la IA";
+        setError(errorMsg);
+        setErrorType("network");
+        createError(
+          aiResult.error || new Error(errorMsg),
+          { userId: user?.uid || "", endpoint: "ai_chat" },
+          "high",
+          "ai_error"
+        );
+        return;
+      }
+
+      const data = aiResult.data;
+      console.log("🔧 [DEBUG] Chat: Respuesta de la IA recibida:", data);
+
+      // Guardar la respuesta de la IA en Firebase con retry
+      if (data.content) {
+        const saveResult = await retryFirebase(
+          async () =>
+            addMessage(newChatId, {
+              role: "assistant",
+              content: data.content,
+            }),
+          "Save AI Response"
+        );
+
+        if (!saveResult.success) {
+          console.warn(
+            "⚠️ No se pudo guardar la respuesta de la IA:",
+            saveResult.error
+          );
+          // No es crítico, continuamos
+        }
+      }
+
+      // Redirigir a la nueva conversación
+      router.push(`/chat/${newChatId}`);
+      return;
     }
 
-    // Guardar mensaje en Firebase
+    // Guardar mensaje en Firebase con retry
     console.log("🔧 [DEBUG] Chat: Guardando mensaje en Firebase");
-    try {
-      await addMessage(currentConversation.id, {
-        role: "user",
-        content: input,
-      });
-      console.log("🔧 [DEBUG] Chat: Mensaje guardado en Firebase exitosamente");
+    const saveResult = await retryFirebase(
+      async () =>
+        addMessage(currentConversation.id, {
+          role: "user",
+          content: input,
+        }),
+      "Save User Message"
+    );
 
-      // Incrementar contador para usuarios anónimos
-      if (isAnonymous) {
-        incrementMessageCount();
-      }
-    } catch (error) {
-      console.error("Error saving message:", error);
+    if (!saveResult.success) {
+      const errorMsg = saveResult.error?.message || "Error al guardar mensaje";
+      setError(errorMsg);
+      setErrorType("error");
+      createError(
+        saveResult.error || new Error(errorMsg),
+        {
+          userId: user?.uid || "",
+          endpoint: "saveMessage",
+        },
+        "medium",
+        "system_error"
+      );
+      return;
+    }
+
+    console.log("🔧 [DEBUG] Chat: Mensaje guardado en Firebase exitosamente");
+
+    // Incrementar contador para usuarios anónimos
+    if (isAnonymous) {
+      incrementMessageCount();
     }
 
     // Llamar directamente a la función de envío de useChat
-    // Esto evita problemas con el evento ya procesado
     console.log("🔧 [DEBUG] Chat: Llamando a handleSubmit de useChat");
     const currentInput = input;
     setInput(""); // Limpiar input manualmente
 
     // Crear un nuevo evento para useChat
-    const formEvent = new Event("submit", {
+    const formEvent = new Event("submit") as unknown as React.FormEvent<HTMLFormElement>;
       bubbles: true,
       cancelable: true,
     }) as React.FormEvent<HTMLFormElement>;
@@ -1138,8 +1232,23 @@ const Chat = React.memo(function Chat({
       {/* Modal de límites anónimos */}
       <AnonymousLimitModal
         isOpen={anonymousLimitModal.isOpen}
-        onClose={() => setAnonymousLimitModal({ isOpen: false, limitType: "messages" })}
+        onClose={() =>
+          setAnonymousLimitModal({ isOpen: false, limitType: "messages" })
+        }
         limitType={anonymousLimitModal.limitType}
+      />
+
+      {/* Notificación de errores */}
+      <ErrorNotification
+        error={error}
+        type={errorType}
+        onDismiss={() => setError(null)}
+        onRetry={() => {
+          // Retry logic - could be customized based on error type
+          setError(null);
+        }}
+        autoDismiss={errorType !== "critical"}
+        dismissTime={8000}
       />
     </div>
   );
