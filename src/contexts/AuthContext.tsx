@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import {
   User,
+  Auth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -15,7 +16,7 @@ import {
   signInAnonymously,
   RecaptchaVerifier,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase"; // TODO(hud): Audit if 'auth' is properly initialized and typed for both dev/prod environments
+import { auth } from "@/lib/firebase";
 
 interface AuthContextType {
   user: User | null;
@@ -238,7 +239,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGitHub,
     signInWithPhone,
     verifyPhoneCode,
-    signInAnonymously,
+    signInAnonymously: signInAnonymouslyAuth,
     firebaseAvailable,
     recaptchaVerifier,
     isAnonymous,

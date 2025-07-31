@@ -46,10 +46,10 @@ if (missingVars.length > 0) {
 }
 
 // Initialize Firebase
-let app;
-let auth;
-let db;
-let storage;
+let app: any;
+let auth: any;
+let db: any;
+let storage: any;
 
 try {
   app = initializeApp(firebaseConfig);
