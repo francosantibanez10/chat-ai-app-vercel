@@ -83,42 +83,92 @@ export const getUserConversations = async (
   includeArchived: boolean = false
 ): Promise<ConversationSummary[]> => {
   try {
-    let q;
     if (includeArchived) {
       // Obtener todas las conversaciones (incluyendo archivadas)
-      q = query(
+      const q = query(
         collection(db, "conversations"),
         where("userId", "==", userId),
         orderBy("updatedAt", "desc")
       );
+
+      const querySnapshot = await getDocs(q);
+      const conversations: ConversationSummary[] = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        conversations.push({
+          id: doc.id,
+          title: data.title,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          messageCount: data.messages?.length || 0,
+          model: data.model,
+          isPinned: data.isPinned || false,
+          isArchived: data.isArchived || false,
+        });
+      });
+
+      return conversations;
     } else {
       // Obtener solo conversaciones no archivadas
-      q = query(
+      // Hacer dos consultas: una para isArchived == false y otra para conversaciones sin el campo
+      const q1 = query(
         collection(db, "conversations"),
         where("userId", "==", userId),
         where("isArchived", "==", false),
         orderBy("updatedAt", "desc")
       );
-    }
+      
+      const q2 = query(
+        collection(db, "conversations"),
+        where("userId", "==", userId),
+        orderBy("updatedAt", "desc")
+      );
 
-    const querySnapshot = await getDocs(q);
-    const conversations: ConversationSummary[] = [];
+      const [snapshot1, snapshot2] = await Promise.all([
+        getDocs(q1),
+        getDocs(q2)
+      ]);
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      conversations.push({
-        id: doc.id,
-        title: data.title,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-        messageCount: data.messages?.length || 0,
-        model: data.model,
-        isPinned: data.isPinned || false,
-        isArchived: data.isArchived || false,
+      // Combinar resultados y eliminar duplicados
+      const conversationsMap = new Map();
+      
+      // Agregar conversaciones con isArchived == false
+      snapshot1.forEach((doc) => {
+        const data = doc.data();
+        conversationsMap.set(doc.id, {
+          id: doc.id,
+          title: data.title,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          messageCount: data.messages?.length || 0,
+          model: data.model,
+          isPinned: data.isPinned || false,
+          isArchived: data.isArchived || false,
+        });
       });
-    });
 
-    return conversations;
+      // Agregar conversaciones sin el campo isArchived (que no están en la primera consulta)
+      snapshot2.forEach((doc) => {
+        const data = doc.data();
+        if (!conversationsMap.has(doc.id) && !data.isArchived) {
+          conversationsMap.set(doc.id, {
+            id: doc.id,
+            title: data.title,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            messageCount: data.messages?.length || 0,
+            model: data.model,
+            isPinned: data.isPinned || false,
+            isArchived: false, // Asumir que no están archivadas
+          });
+        }
+      });
+
+      return Array.from(conversationsMap.values()).sort((a, b) => 
+        b.updatedAt.getTime() - a.updatedAt.getTime()
+      );
+    }
   } catch (error) {
     console.error("Error getting user conversations:", error);
     throw error;
