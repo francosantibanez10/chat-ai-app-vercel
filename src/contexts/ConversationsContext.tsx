@@ -140,9 +140,10 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({
     if (!user?.uid) throw new Error("Usuario no autenticado");
     setIsLoading(true);
     try {
-      const newConversation = await createConversation(user.uid);
+      const newConversationId = await createConversation(user.uid);
+      console.log("🔧 [DEBUG] Context: createNewConversation retornó ID:", newConversationId);
       await updateConversationsList();
-      return newConversation.id;
+      return newConversationId;
     } finally {
       setIsLoading(false);
     }

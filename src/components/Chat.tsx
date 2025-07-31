@@ -502,6 +502,40 @@ const Chat = React.memo(function Chat({
           content: input,
         });
 
+        // Enviar mensaje a la IA usando la nueva conversación
+        console.log(
+          "🔧 [DEBUG] Chat: Enviando mensaje a la IA con nueva conversación"
+        );
+        const currentInput = input;
+        setInput(""); // Limpiar input manualmente
+
+        // Llamar directamente a la API de chat con la nueva conversación
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: currentInput }],
+            conversationId: newChatId,
+            userId: user?.uid,
+            model: selectedModel,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Error al enviar mensaje a la IA");
+        }
+
+        const data = await response.json();
+        console.log("🔧 [DEBUG] Chat: Respuesta de la IA recibida:", data);
+
+        // Guardar la respuesta de la IA en Firebase
+        if (data.content) {
+          await addMessage(newChatId, {
+            role: "assistant",
+            content: data.content,
+          });
+        }
+
         // Redirigir a la nueva conversación
         router.push(`/chat/${newChatId}`);
         return;
