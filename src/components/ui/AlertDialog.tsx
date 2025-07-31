@@ -77,7 +77,7 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed inset-4 flex items-center justify-center z-[91] md:inset-0 md:flex md:items-center md:justify-center"
+            className="fixed inset-4 flex items-center justify-center z-[91] md:inset-0 md:flex md:items-center md:justify-center"
           >
             <div className="w-full max-w-md bg-gray-900 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
               {/* Header */}
@@ -96,7 +96,9 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
 
               {/* Content */}
               <div className="p-4">
-                <p className="text-gray-300 text-sm leading-relaxed">{message}</p>
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {message}
+                </p>
               </div>
 
               {/* Actions */}
@@ -120,4 +122,4 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
       )}
     </AnimatePresence>
   );
-}; 
+};

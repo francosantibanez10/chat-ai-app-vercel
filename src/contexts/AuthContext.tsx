@@ -8,8 +8,12 @@ import {
   signOut,
   onAuthStateChanged,
   GoogleAuthProvider,
+  GithubAuthProvider,
+  PhoneAuthProvider,
   signInWithPopup,
+  signInWithCredential,
   signInAnonymously,
+  RecaptchaVerifier,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -20,8 +24,12 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithGitHub: () => Promise<void>;
+  signInWithPhone: (phoneNumber: string) => Promise<{ verificationId: string }>;
+  verifyPhoneCode: (verificationId: string, code: string) => Promise<void>;
   signInAnonymously: () => Promise<void>;
   firebaseAvailable: boolean;
+  recaptchaVerifier: RecaptchaVerifier | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [firebaseAvailable, setFirebaseAvailable] = useState(false);
+  const [recaptchaVerifier, setRecaptchaVerifier] =
+    useState<RecaptchaVerifier | null>(null);
 
   useEffect(() => {
     // Verificar si Firebase auth está disponible
@@ -134,6 +144,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithGitHub = async () => {
+    if (!auth || !firebaseAvailable) {
+      throw new Error(
+        "Firebase Auth is not available. Please check your configuration."
+      );
+    }
+
+    try {
+      const provider = new GithubAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      throw new Error(error.message);
+    }
+  };
+
+  const signInWithPhone = async (phoneNumber: string) => {
+    if (!auth || !firebaseAvailable) {
+      throw new Error(
+        "Firebase Auth is not available. Please check your configuration."
+      );
+    }
+
+    try {
+      // Crear reCAPTCHA verifier si no existe
+      if (!recaptchaVerifier) {
+        const verifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+          size: "invisible",
+          callback: () => {
+            console.log("reCAPTCHA solved");
+          },
+        });
+        setRecaptchaVerifier(verifier);
+      }
+
+      const provider = new PhoneAuthProvider(auth);
+      const verificationId = await provider.verifyPhoneNumber(
+        phoneNumber,
+        recaptchaVerifier!
+      );
+
+      return { verificationId };
+    } catch (error: any) {
+      throw new Error(error.message);
+    }
+  };
+
+  const verifyPhoneCode = async (verificationId: string, code: string) => {
+    if (!auth || !firebaseAvailable) {
+      throw new Error(
+        "Firebase Auth is not available. Please check your configuration."
+      );
+    }
+
+    try {
+      const credential = PhoneAuthProvider.credential(verificationId, code);
+      await signInWithCredential(auth, credential);
+    } catch (error: any) {
+      throw new Error(error.message);
+    }
+  };
+
   const signInAnonymouslyAuth = async () => {
     if (!auth || !firebaseAvailable) {
       throw new Error(
@@ -155,8 +226,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     logout,
     signInWithGoogle,
+    signInWithGitHub,
+    signInWithPhone,
+    verifyPhoneCode,
     signInAnonymously,
     firebaseAvailable,
+    recaptchaVerifier,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
