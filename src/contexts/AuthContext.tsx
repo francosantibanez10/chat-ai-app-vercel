@@ -17,6 +17,9 @@ import {
   RecaptchaVerifier,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { retryFirebase } from "@/lib/retryManager";
+import { executeWithFirebaseFallback } from "@/lib/fallbackManager";
+import { createError } from "@/lib/errorHandler";
 
 interface AuthContextType {
   user: User | null;
@@ -43,6 +46,90 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [recaptchaVerifier, setRecaptchaVerifier] =
     useState<RecaptchaVerifier | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
+
+  // Función helper para traducir errores de Firebase a mensajes amigables
+  const getUserFriendlyAuthError = (errorCode: string): string => {
+    const errorMessages: Record<string, string> = {
+      "auth/user-not-found": "No existe una cuenta con este email",
+      "auth/wrong-password": "Contraseña incorrecta",
+      "auth/invalid-email": "Email inválido",
+      "auth/user-disabled": "Esta cuenta ha sido deshabilitada",
+      "auth/too-many-requests": "Demasiados intentos. Intenta más tarde",
+      "auth/network-request-failed": "Error de conexión. Verifica tu internet",
+      "auth/operation-not-allowed": "Esta operación no está permitida",
+      "auth/weak-password": "La contraseña es muy débil",
+      "auth/email-already-in-use": "Este email ya está registrado",
+      "auth/invalid-credential": "Credenciales inválidas",
+      "auth/account-exists-with-different-credential":
+        "Ya existe una cuenta con este email",
+      "auth/requires-recent-login": "Necesitas iniciar sesión nuevamente",
+      "auth/provider-already-linked": "Esta cuenta ya está vinculada",
+      "auth/no-such-provider": "Proveedor de autenticación no encontrado",
+      "auth/invalid-verification-code": "Código de verificación inválido",
+      "auth/invalid-verification-id": "ID de verificación inválido",
+      "auth/missing-verification-code": "Código de verificación requerido",
+      "auth/missing-verification-id": "ID de verificación requerido",
+      "auth/quota-exceeded": "Se ha excedido la cuota de solicitudes",
+      "auth/unverified-email": "Email no verificado",
+      "auth/app-not-authorized": "Aplicación no autorizada",
+      "auth/captcha-check-failed": "Verificación de captcha fallida",
+      "auth/invalid-phone-number": "Número de teléfono inválido",
+      "auth/missing-phone-number": "Número de teléfono requerido",
+      "auth/invalid-recaptcha-token": "Token de reCAPTCHA inválido",
+      "auth/missing-recaptcha-token": "Token de reCAPTCHA requerido",
+      "auth/invalid-app-credential": "Credencial de aplicación inválida",
+      "auth/missing-app-credential": "Credencial de aplicación requerida",
+      "auth/session-expired": "Sesión expirada",
+      "auth/credential-already-in-use": "Credencial ya en uso",
+      "auth/tenant-id-mismatch": "ID de inquilino no coincide",
+      "auth/unsupported-tenant-operation":
+        "Operación de inquilino no soportada",
+      "auth/invalid-tenant-id": "ID de inquilino inválido",
+      "auth/admin-restricted-operation":
+        "Operación restringida por administrador",
+      "auth/argument-error": "Error en los argumentos proporcionados",
+      "auth/invalid-api-key": "Clave de API inválida",
+      "auth/invalid-user-token": "Token de usuario inválido",
+      "auth/invalid-tenant-type": "Tipo de inquilino inválido",
+      "auth/unauthorized-domain": "Dominio no autorizado",
+      "auth/function-disabled": "Función deshabilitada",
+      "auth/invalid-dynamic-link-domain": "Dominio de enlace dinámico inválido",
+      "auth/duplicate-credential": "Credencial duplicada",
+      "auth/maximum-second-factor-count-exceeded":
+        "Se excedió el máximo de factores de segundo factor",
+      "auth/second-factor-already-in-use": "Factor de segundo factor ya en uso",
+      "auth/maximum-user-count-exceeded": "Se excedió el máximo de usuarios",
+      "auth/operation-not-supported-in-this-environment":
+        "Operación no soportada en este entorno",
+      "auth/unsupported-first-factor": "Primer factor no soportado",
+      "auth/user-mismatch": "Usuario no coincide",
+      "auth/requires-multi-factor":
+        "Se requiere autenticación de múltiples factores",
+      "auth/blocking-function-error": "Error en función de bloqueo",
+      "auth/recaptcha-not-enabled": "reCAPTCHA no habilitado",
+      "auth/missing-recaptcha-version": "Versión de reCAPTCHA requerida",
+      "auth/invalid-recaptcha-version": "Versión de reCAPTCHA inválida",
+      "auth/invalid-recaptcha-action": "Acción de reCAPTCHA inválida",
+      "auth/missing-client-type": "Tipo de cliente requerido",
+      "auth/resource-exhausted": "Recurso agotado",
+      "auth/deadline-exceeded": "Tiempo límite excedido",
+      "auth/internal-error": "Error interno del servidor",
+      "auth/unavailable": "Servicio no disponible",
+      "auth/data-loss": "Pérdida de datos",
+      "auth/failed-precondition": "Condición previa fallida",
+      "auth/aborted": "Operación abortada",
+      "auth/out-of-range": "Valor fuera de rango",
+      "auth/unimplemented": "Operación no implementada",
+      "auth/not-found": "Recurso no encontrado",
+      "auth/already-exists": "Recurso ya existe",
+      "auth/permission-denied": "Permiso denegado",
+      "auth/unauthenticated": "No autenticado",
+      "auth/cancelled": "Operación cancelada",
+      "auth/unknown": "Error desconocido",
+    };
+
+    return errorMessages[errorCode] || "Ocurrió un error inesperado";
+  };
 
   useEffect(() => {
     // Verificar si Firebase auth está disponible
@@ -100,10 +187,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (error: any) {
-      throw new Error(error.message);
+    const result = await retryFirebase(async () => {
+      try {
+        return await signInWithEmailAndPassword(auth, email, password);
+      } catch (error: any) {
+        // Crear error estructurado
+        createError(
+          error,
+          { userId: user?.uid, endpoint: "signIn" },
+          "high",
+          "authentication"
+        );
+        throw new Error(getUserFriendlyAuthError(error.code));
+      }
+    }, "User Sign In");
+
+    if (!result.success) {
+      throw result.error || new Error("Error al iniciar sesión");
     }
   };
 
@@ -114,10 +214,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-    } catch (error: any) {
-      throw new Error(error.message);
+    const result = await retryFirebase(async () => {
+      try {
+        return await createUserWithEmailAndPassword(auth, email, password);
+      } catch (error: any) {
+        // Crear error estructurado
+        createError(
+          error,
+          { userId: user?.uid, endpoint: "signUp" },
+          "high",
+          "authentication"
+        );
+        throw new Error(getUserFriendlyAuthError(error.code));
+      }
+    }, "User Sign Up");
+
+    if (!result.success) {
+      throw result.error || new Error("Error al crear cuenta");
     }
   };
 
