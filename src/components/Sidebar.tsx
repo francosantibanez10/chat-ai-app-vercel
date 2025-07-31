@@ -122,11 +122,15 @@ export default function Sidebar({
   };
 
   const handleSelectChat = async (chatId: string) => {
+    console.log("🔧 [DEBUG] Sidebar: handleSelectChat llamado con chatId:", chatId);
     try {
+      console.log("🔧 [DEBUG] Sidebar: Cargando conversación...");
       await loadConversation(chatId);
+      console.log("🔧 [DEBUG] Sidebar: Conversación cargada, navegando a:", `/chat/${chatId}`);
       router.push(`/chat/${chatId}`);
       onChatSelect?.(chatId);
       setSelectedIndex(-1); // Reset selection
+      console.log("🔧 [DEBUG] Sidebar: Navegación completada");
     } catch (error) {
       console.error("Error loading chat:", error);
     }
