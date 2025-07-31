@@ -388,7 +388,7 @@ export default function Sidebar({
           </AnimatePresence>
 
           {/* Conversations List */}
-          <div className="flex-1 overflow-y-auto overflow-x-visible">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-visible">
             {isLoading ? (
               <div className="p-2">
                 <ConversationSkeleton count={5} />
@@ -421,7 +421,7 @@ export default function Sidebar({
                 onRenameConversation={handleRenameConversation}
                 onShareConversation={handleShareConversation}
                 onArchiveConversation={handleArchiveConversation}
-                height={window.innerHeight - 300} // Responsive height
+                height={0} // Usar flex-1 en lugar de altura fija
                 itemHeight={80}
               />
             )}
