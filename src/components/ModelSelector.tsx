@@ -75,10 +75,22 @@ export default function ModelSelector({
     setIsOpen(false);
   };
 
+  const handleToggle = () => {
+    console.log('🖱️ ModelSelector clicked, current isOpen:', isOpen);
+    setIsOpen(!isOpen);
+    console.log('🔄 New isOpen state:', !isOpen);
+  };
+
+  console.log('🎯 ModelSelector render - isOpen:', isOpen);
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div 
+      className="relative" 
+      ref={dropdownRef}
+      style={{ position: "relative", zIndex: 50 }}
+    >
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className="flex items-center space-x-1.5 p-1.5 hover:bg-gray-800 rounded-md transition-colors"
       >
         <span className="text-sm font-medium text-white">
@@ -92,7 +104,24 @@ export default function ModelSelector({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-1 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 md:left-0 left-1/2 transform md:transform-none -translate-x-1/2">
+        <div
+          className="absolute top-full right-0 mt-1 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-lg"
+          style={{
+            position: "absolute",
+            top: "100%",
+            right: "0",
+            marginTop: "4px",
+            width: "320px",
+            backgroundColor: "#1f2937",
+            border: "1px solid #374151",
+            borderRadius: "8px",
+            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+            zIndex: 9999,
+            visibility: "visible",
+            opacity: 1,
+            display: "block",
+          }}
+        >
           <div className="p-2">
             {models.map((model) => (
               <button
@@ -101,8 +130,13 @@ export default function ModelSelector({
                 className={`w-full text-left p-3 rounded-md transition-colors ${
                   selectedModel === model.id
                     ? "bg-gray-700 text-white"
-                    : "text-gray-300 hover:bg-gray-800"
+                    : "text-gray-300 hover:bg-gray-700"
                 }`}
+                style={{
+                  visibility: "visible",
+                  opacity: 1,
+                  display: "block",
+                }}
               >
                 <div className="flex flex-col">
                   <span className="font-medium text-sm">{model.name}</span>

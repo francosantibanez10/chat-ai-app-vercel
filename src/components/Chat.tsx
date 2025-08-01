@@ -1106,21 +1106,23 @@ const Chat = React.memo(function Chat({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-screen">
-      {/* Top Bar - Más minimalista y fino */}
-      <div className="flex items-center justify-between pl-3 pr-1 py-1.5 bg-gray-900 relative">
-        {/* Lado izquierdo - Selector de modelos en desktop, botón menú en mobile */}
-        <div className="flex items-center space-x-2">
-          {/* Botón menú en mobile */}
+    <div className="flex flex-col h-screen bg-gray-900">
+      {/* Header */}
+      <div 
+        className="flex items-center justify-between px-2 sm:px-3 py-1 sm:py-4 border-b border-gray-700 relative bg-gray-900/95 backdrop-blur-sm"
+        style={{ overflow: "visible", zIndex: 40 }}
+      >
+        {/* Lado izquierdo - Botón de menú y selector de modelo */}
+        <div className="flex items-center gap-2 min-w-0 flex-1" style={{ overflow: "visible" }}>
           <button
             onClick={onMenuClick}
-            className="md:hidden p-1.5 hover:bg-gray-800 rounded-md transition-colors"
+            className="p-1 sm:p-2 hover:bg-gray-800 rounded-md transition-colors lg:hidden touch-manipulation min-w-[32px] min-h-[32px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center flex-shrink-0"
+            title="Menú"
           >
-            <Menu className="w-5 h-5 text-gray-400" />
+            <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
           </button>
 
-          {/* Selector de modelos - visible solo en desktop */}
-          <div className="hidden md:flex items-center space-x-1.5">
+          <div className="relative flex-shrink-0" style={{ overflow: "visible" }}>
             <ModelSelector
               selectedModel={selectedModel}
               onModelChange={setSelectedModel}

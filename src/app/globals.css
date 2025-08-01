@@ -1,3 +1,10 @@
+/* ─── Main CSS Entry Point ─── */
+/* Optimized and modular CSS structure */
+
+/* Import Highlight.js theme first - must be at the very beginning */
+@import "highlight.js/styles/github-dark.css";
+
+/* Tailwind directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
